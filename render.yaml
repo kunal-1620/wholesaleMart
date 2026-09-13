@@ -38,13 +38,15 @@ services:
       - key: APP_BOOTSTRAP_PAYMENT_INSTRUCTIONS
         value: Manual payment. Upload transaction proof after approval.
       - key: APP_STORAGE_BACKEND
-        value: database
+        value: r2
       - key: APP_STORAGE_LIMIT_MB
         value: 8500
       - key: APP_UPLOADS_ENABLED
         value: true
       - key: R2_ENDPOINT
         sync: false
+      - key: R2_REGION
+        value: auto
       - key: R2_ACCESS_KEY_ID
         sync: false
       - key: R2_SECRET_ACCESS_KEY

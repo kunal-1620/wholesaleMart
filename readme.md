@@ -379,7 +379,7 @@ APP_STORAGE_LIMIT_MB=8500
 APP_UPLOADS_ENABLED=true
 ```
 
-The checked-in `render.yaml` keeps `APP_STORAGE_BACKEND=database` as a safe default so deploys do not fail before R2 credentials are added.
+The checked-in `render.yaml` keeps `APP_STORAGE_BACKEND=r2` for production. Make sure the R2 secret values are configured in Render before deploying.
 
 ## File storage flow
 
