@@ -321,6 +321,7 @@ public class AdminController {
         model.addAttribute("order", order);
         model.addAttribute("items", items);
         model.addAttribute("productCodesByItem", orderService.productCodesForItems(items));
+        model.addAttribute("productIdsByItem", orderService.productIdsForItems(items));
         model.addAttribute("stockIssues", shouldCheckLiveStock(order) ? orderService.orderStockIssues(order) : List.of());
         model.addAttribute("colors", adminService.colors(business));
         model.addAttribute("sizeSets", adminService.sizeSets(business));

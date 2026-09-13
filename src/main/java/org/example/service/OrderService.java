@@ -234,6 +234,18 @@ public class OrderService {
         return productCodes;
     }
 
+    public Map<Long, Long> productIdsForItems(List<OrderItem> items) {
+        Map<Long, Long> productIds = new HashMap<>();
+        for (OrderItem item : items) {
+            if (item.getProductColorId() != null) {
+                colors.findById(item.getProductColorId())
+                        .map(color -> color.getProduct().getId())
+                        .ifPresent(productId -> productIds.put(item.getId(), productId));
+            }
+        }
+        return productIds;
+    }
+
     public CustomerOrder order(Long id) {
         return orders.findById(id).orElseThrow();
     }

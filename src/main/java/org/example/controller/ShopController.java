@@ -123,6 +123,7 @@ public class ShopController {
                 continue;
             }
             CartLine line = new CartLine();
+            line.setProductId(product.getId());
             line.setProductColorId(productColorId);
             line.setSizeSetId(sizeSetId);
             line.setProductCode(product.getProductCode());
@@ -275,6 +276,7 @@ public class ShopController {
         model.addAttribute("order", order);
         model.addAttribute("items", items);
         model.addAttribute("productCodesByItem", orderService.productCodesForItems(items));
+        model.addAttribute("productIdsByItem", orderService.productIdsForItems(items));
         model.addAttribute("business", order.getBusiness());
         return withCommon(session, model, "shop/order-detail");
     }

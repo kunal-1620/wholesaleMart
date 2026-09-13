@@ -20,7 +20,10 @@
             <thead><tr><th>Product ID</th><th>Product</th><th>Colour</th><th>Size set</th><th>Set price</th><th>Qty</th><th>Line total</th><th>Actions</th></tr></thead>
             <tbody>
             <tr th:each="line, iter : ${cart}">
-                <td th:text="${line.productCode ?: '-'}">P0001</td>
+                <td>
+                    <a th:if="${line.productId != null}" th:href="@{/b/{slug}/shop/products/{id}(slug=${business.slug},id=${line.productId})}" th:text="${line.productCode ?: '-'}">P0001</a>
+                    <span th:if="${line.productId == null}" th:text="${line.productCode ?: '-'}">P0001</span>
+                </td>
                 <td th:text="${line.productName}"></td>
                 <td th:text="${line.colorName}"></td>
                 <td th:text="${line.sizeSetName + ' (' + line.sizeLabels + ')'}"></td>

@@ -3,6 +3,7 @@ package org.example.session;
 import java.math.BigDecimal;
 
 public class CartLine {
+    private Long productId;
     private Long productColorId;
     private Long sizeSetId;
     private String productCode;
@@ -12,6 +13,14 @@ public class CartLine {
     private String sizeLabels;
     private int quantity;
     private BigDecimal priceEach;
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
 
     public Long getProductColorId() {
         return productColorId;

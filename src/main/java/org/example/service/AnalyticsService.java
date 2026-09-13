@@ -90,8 +90,9 @@ public class AnalyticsService {
         for (CustomerOrder order : orders) {
             for (OrderItem item : orderService.items(order)) {
                 String productCode = productCode(item);
-                String key = productCode + "|" + item.getProductName();
-                MetricAccumulator row = rows.computeIfAbsent(key, ignored -> new MetricAccumulator(productCode, item.getProductName()));
+                Long productId = productId(item);
+                String key = (productId == null ? productCode : productId.toString()) + "|" + item.getProductName();
+                MetricAccumulator row = rows.computeIfAbsent(key, ignored -> new MetricAccumulator(productId, productCode, item.getProductName()));
                 row.orders++;
                 row.sets += item.getQuantity();
                 row.pieces += item.getQuantity() * sizeCount(item.getSizeLabels());
@@ -132,8 +133,9 @@ public class AnalyticsService {
             for (OrderItem item : orderService.items(order)) {
                 if (item.isOutOfStock()) {
                     String productCode = productCode(item);
+                    Long productId = productId(item);
                     String key = item.getProductName() + " / " + item.getColorName() + " / " + item.getSizeSetName();
-                    MetricAccumulator row = rows.computeIfAbsent(productCode + "|" + key, ignored -> new MetricAccumulator(productCode, key));
+                    MetricAccumulator row = rows.computeIfAbsent((productId == null ? productCode : productId.toString()) + "|" + key, ignored -> new MetricAccumulator(productId, productCode, key));
                     row.orders++;
                     row.sets += item.getQuantity();
                     row.pieces += item.getQuantity() * sizeCount(item.getSizeLabels());
@@ -189,7 +191,18 @@ public class AnalyticsService {
                 .orElse("-");
     }
 
+    private Long productId(OrderItem item) {
+        if (item.getProductColorId() == null) {
+            return null;
+        }
+        return colors.findById(item.getProductColorId())
+                .map(ProductColor::getProduct)
+                .map(product -> product.getId())
+                .orElse(null);
+    }
+
     private static class MetricAccumulator {
+        private final Long productId;
         private final String productCode;
         private final String label;
         private int orders;
@@ -197,13 +210,18 @@ public class AnalyticsService {
         private int pieces;
         private BigDecimal amount = BigDecimal.ZERO;
 
-        private MetricAccumulator(String productCode, String label) {
+        private MetricAccumulator(Long productId, String productCode, String label) {
+            this.productId = productId;
             this.productCode = productCode;
             this.label = label;
         }
 
+        private MetricAccumulator(String productCode, String label) {
+            this(null, productCode, label);
+        }
+
         private MetricRow row() {
-            return new MetricRow(productCode, label, orders, sets, pieces, amount);
+            return new MetricRow(productId, productCode, label, orders, sets, pieces, amount);
         }
     }
 
@@ -224,7 +242,7 @@ public class AnalyticsService {
     ) {
     }
 
-    public record MetricRow(String productCode, String label, int orders, int sets, int pieces, BigDecimal amount) {
+    public record MetricRow(Long productId, String productCode, String label, int orders, int sets, int pieces, BigDecimal amount) {
     }
 
     public record CustomerMetricRow(UserAccount customer, int orders, BigDecimal spend, LocalDateTime lastOrderAt) {

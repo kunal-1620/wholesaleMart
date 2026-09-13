@@ -72,7 +72,10 @@
                 <thead><tr><th>Product ID</th><th>Product</th><th>Order lines</th><th>Sets requested</th><th>Pieces requested</th></tr></thead>
                 <tbody>
                 <tr th:each="row : ${summary.mostDemandedProducts}">
-                    <td th:text="${row.productCode}">P0001</td>
+                    <td>
+                        <a th:if="${row.productId != null}" th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${row.productId})}" th:text="${row.productCode}">P0001</a>
+                        <span th:if="${row.productId == null}" th:text="${row.productCode}">P0001</span>
+                    </td>
                     <td th:text="${row.label}"></td>
                     <td th:text="${row.orders}"></td>
                     <td th:text="${row.sets}"></td>
@@ -91,7 +94,10 @@
                 <thead><tr><th>Product ID</th><th>Product</th><th>Order lines</th><th>Sets sold</th><th>Pieces sold</th><th>Amount</th></tr></thead>
                 <tbody>
                 <tr th:each="row : ${summary.highlySoldProducts}">
-                    <td th:text="${row.productCode}">P0001</td>
+                    <td>
+                        <a th:if="${row.productId != null}" th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${row.productId})}" th:text="${row.productCode}">P0001</a>
+                        <span th:if="${row.productId == null}" th:text="${row.productCode}">P0001</span>
+                    </td>
                     <td th:text="${row.label}"></td>
                     <td th:text="${row.orders}"></td>
                     <td th:text="${row.sets}"></td>
@@ -110,7 +116,10 @@
                 <thead><tr><th>Product ID</th><th>Product / Colour / Set</th><th>Occurrences</th><th>Sets impacted</th><th>Pieces impacted</th></tr></thead>
                 <tbody>
                 <tr th:each="row : ${summary.frequentlyOutOfStock}">
-                    <td th:text="${row.productCode}">P0001</td>
+                    <td>
+                        <a th:if="${row.productId != null}" th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${row.productId})}" th:text="${row.productCode}">P0001</a>
+                        <span th:if="${row.productId == null}" th:text="${row.productCode}">P0001</span>
+                    </td>
                     <td th:text="${row.label}"></td>
                     <td th:text="${row.orders}"></td>
                     <td th:text="${row.sets}"></td>

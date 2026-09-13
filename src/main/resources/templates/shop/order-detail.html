@@ -58,7 +58,10 @@
             <thead><tr><th>Product ID</th><th>Product</th><th>Colour</th><th>Size set</th><th>Qty</th><th>Set price</th><th>Stock issue</th></tr></thead>
             <tbody>
             <tr th:each="item : ${items}" th:classappend="${item.outOfStock ? 'oos' : ''}">
-                <td th:text="${productCodesByItem[item.id]}">P0001</td>
+                <td>
+                    <a th:if="${productIdsByItem[item.id] != null}" th:href="@{/b/{slug}/shop/products/{id}(slug=${business.slug},id=${productIdsByItem[item.id]})}" th:text="${productCodesByItem[item.id]}">P0001</a>
+                    <span th:if="${productIdsByItem[item.id] == null}" th:text="${productCodesByItem[item.id]}">P0001</span>
+                </td>
                 <td th:text="${item.productName}"></td>
                 <td th:text="${item.colorName}"></td>
                 <td th:text="${item.sizeSetName + ' (' + item.sizeLabels + ')'}"></td>
