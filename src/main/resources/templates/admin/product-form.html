@@ -22,7 +22,7 @@
         </div>
         <form method="post" th:action="@{/b/{slug}/admin/products(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <input type="hidden" name="id" th:value="${product.id}">
-            <p class="muted" th:if="${product.createdAt != null}" th:text="${'Created: ' + product.createdAt.toLocalDate()}"></p>
+            <p class="muted" th:if="${product.createdAt != null}" th:text="${'Created: ' + product.createdAt.toLocalDate().toString()}"></p>
             <div class="grid">
                 <div>
                     <label>Product ID</label>

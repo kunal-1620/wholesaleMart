@@ -142,7 +142,7 @@
                     <td th:text="'Tier ' + ${row.customer.tier}"></td>
                     <td th:text="${row.orders}"></td>
                     <td th:text="${row.spend}"></td>
-                    <td th:text="${row.lastOrderAt ?: '-'}"></td>
+                    <td th:text="${row.lastOrderAt != null ? row.lastOrderAt.toLocalDate().toString() : '-'}"></td>
                     <td><a th:href="@{/b/{slug}/admin/customers/{id}/activity(slug=${business.slug},id=${row.customer.id})}">Open</a></td>
                 </tr>
                 </tbody>
