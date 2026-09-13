@@ -331,6 +331,26 @@ pre {
     grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(150px, 1fr)) auto;
 }
 
+.product-filter {
+    align-items: end;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.product-filter label {
+    margin-top: 0;
+}
+
+.compact-head {
+    align-items: center;
+    margin: 0 0 12px;
+}
+
+.compact-head h3 {
+    margin: 0;
+}
+
 h1,
 h2,
 h3 {
@@ -499,6 +519,13 @@ button.danger:hover,
     color: #7a271a;
 }
 
+.icon-button {
+    border-radius: 10px;
+    min-height: 34px;
+    min-width: 38px;
+    padding: 7px 10px;
+}
+
 .actions {
     align-items: center;
     display: flex;
@@ -565,6 +592,28 @@ button.danger:hover,
 
 .dialog-actions form {
     margin: 0;
+}
+
+.danger-zone {
+    align-items: center;
+    background: var(--danger-soft);
+    border: 1px solid #fac7bd;
+    border-radius: var(--radius);
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-top: 22px;
+    padding: 16px;
+}
+
+.danger-zone h3,
+.danger-zone p {
+    margin-bottom: 0;
+}
+
+.tiny-note {
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .table-wrap {

@@ -92,12 +92,37 @@ public class AdminController {
     }
 
     @GetMapping("/products")
-    public String products(HttpSession session, Model model) {
+    public String products(
+            HttpSession session,
+            Model model,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String colorName,
+            @RequestParam(required = false) String setName,
+            @RequestParam(required = false, defaultValue = "false") boolean inStockOnly,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false, defaultValue = "recent") String sort
+    ) {
         Business business = business(session);
-        List<Product> products = adminService.products(business);
+        List<Product> products = adminService.products(business, q, categoryId, colorName, setName, inStockOnly, minPrice, maxPrice, status, sort);
         model.addAttribute("products", products);
         model.addAttribute("activationIssues", adminService.activationIssues(products));
         model.addAttribute("inventorySummaryByProduct", adminService.inventorySummaryByProduct(products));
+        model.addAttribute("deletableProducts", adminService.deletableProducts(products));
+        model.addAttribute("categories", adminService.categories(business));
+        model.addAttribute("colorOptions", adminService.productColorOptions(business));
+        model.addAttribute("setOptions", adminService.productSetOptions(business));
+        model.addAttribute("q", q);
+        model.addAttribute("categoryId", categoryId);
+        model.addAttribute("colorName", colorName);
+        model.addAttribute("setName", setName);
+        model.addAttribute("inStockOnly", inStockOnly);
+        model.addAttribute("minPrice", minPrice);
+        model.addAttribute("maxPrice", maxPrice);
+        model.addAttribute("status", status);
+        model.addAttribute("sort", sort);
         return withCommon(session, model, "admin/products");
     }
 
@@ -125,6 +150,8 @@ public class AdminController {
         model.addAttribute("sizeSets", adminService.sizeSets(product));
         model.addAttribute("selectedSetTemplateIds", adminService.selectedSetTemplateIds(product));
         model.addAttribute("activationIssue", adminService.activationIssue(product));
+        model.addAttribute("canDeleteProduct", adminService.canDeleteProduct(product));
+        model.addAttribute("deletableColors", adminService.deletableColors(colors));
         return productForm(session, model);
     }
 
@@ -258,6 +285,22 @@ public class AdminController {
         return adminRedirect(session, "/products/" + id + "/edit");
     }
 
+    @PostMapping("/products/{id}/delete")
+    public String deleteProduct(
+            HttpSession session,
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            adminService.deleteProduct(business(session), id);
+            redirectAttributes.addFlashAttribute("message", "Product deleted. Its colour images and inventory were removed from storage.");
+            return adminRedirect(session, "/products");
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return adminRedirect(session, "/products/" + id + "/edit");
+        }
+    }
+
     @PostMapping("/colors/{id}/inventory")
     public String updateInventory(
             HttpSession session,
@@ -273,6 +316,22 @@ public class AdminController {
             redirectAttributes.addFlashAttribute("activatePromptProductId", color.getProduct().getId());
         }
         return adminRedirect(session, "/products/" + color.getProduct().getId() + "/edit");
+    }
+
+    @PostMapping("/colors/{id}/delete")
+    public String deleteColor(
+            HttpSession session,
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        Long productId = adminService.color(id).getProduct().getId();
+        try {
+            productId = adminService.deleteColor(business(session), id);
+            redirectAttributes.addFlashAttribute("message", "Colour deleted. Its image and inventory were removed from storage.");
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
+        return adminRedirect(session, "/products/" + productId + "/edit");
     }
 
     @GetMapping("/orders")
@@ -499,6 +558,12 @@ public class AdminController {
         }
         if (!model.containsAttribute("activationIssue")) {
             model.addAttribute("activationIssue", null);
+        }
+        if (!model.containsAttribute("canDeleteProduct")) {
+            model.addAttribute("canDeleteProduct", false);
+        }
+        if (!model.containsAttribute("deletableColors")) {
+            model.addAttribute("deletableColors", Map.of());
         }
         return withCommon(session, model, "admin/product-form");
     }

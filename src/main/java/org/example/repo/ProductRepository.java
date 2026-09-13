@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByBusinessOrderByName(Business business);
 
+    List<Product> findByBusinessOrderByCreatedAtDescIdDesc(Business business);
+
     List<Product> findByBusinessOrderByProductCodeAscNameAsc(Business business);
 
     List<Product> findByBusinessOrderById(Business business);

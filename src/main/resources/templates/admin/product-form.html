@@ -58,6 +58,16 @@
             <p class="muted">Each size listed in a set is exactly 1 piece. Quantity 5 of S,M,L deducts S -5, M -5, L -5.</p>
             <div class="actions"><button>Save product</button></div>
         </form>
+        <div class="danger-zone" th:if="${product.id != null}">
+            <div>
+                <h3>Delete product</h3>
+                <p class="muted" th:if="${canDeleteProduct}">Only available because this product has no order history. This removes colours, inventory, and stored product images.</p>
+                <p class="muted" th:if="${!canDeleteProduct}">This product exists in one or more orders, so it cannot be permanently deleted. Set status to Inactive / Draft to hide it from customers.</p>
+            </div>
+            <form th:if="${canDeleteProduct}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}">
+                <button class="danger">🗑 Delete product</button>
+            </form>
+        </div>
     </section>
 
     <section class="card" th:if="${product.id != null}" style="margin-top:18px">
@@ -86,7 +96,13 @@
         <div class="grid">
             <article class="card" th:each="color : ${colors}">
                 <img class="image" th:if="${color.imagePath}" th:src="${color.imagePath}" alt="">
-                <h3 th:text="${color.name}"></h3>
+                <div class="section-head compact-head">
+                    <h3 th:text="${color.name}"></h3>
+                    <form th:if="${deletableColors[color.id]}" method="post" th:action="@{/b/{slug}/admin/colors/{id}/delete(slug=${business.slug},id=${color.id})}">
+                        <button class="danger icon-button" title="Delete colour" aria-label="Delete colour">🗑</button>
+                    </form>
+                    <span class="muted tiny-note" th:if="${!deletableColors[color.id]}">Has orders</span>
+                </div>
                 <p class="muted">Current stock</p>
                 <p>
                     <span class="badge" th:each="stock : ${stockByColor[color.id]}" th:text="${stock.sizeLabel + ': ' + stock.quantity}"></span>

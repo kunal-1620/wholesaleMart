@@ -13,6 +13,7 @@ import org.example.domain.UserAccount;
 import org.example.repo.BusinessRepository;
 import org.example.repo.CategoryRepository;
 import org.example.repo.InventoryStockRepository;
+import org.example.repo.OrderItemRepository;
 import org.example.repo.ProductColorRepository;
 import org.example.repo.ProductRepository;
 import org.example.repo.SizeOptionRepository;
@@ -27,8 +28,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -42,6 +45,7 @@ public class AdminService {
     private final ProductRepository products;
     private final ProductColorRepository colors;
     private final InventoryStockRepository inventory;
+    private final OrderItemRepository orderItems;
     private final SizeSetRepository sizeSets;
     private final SizeOptionRepository sizeOptions;
     private final SizeSetTemplateRepository setTemplates;
@@ -56,6 +60,7 @@ public class AdminService {
             ProductRepository products,
             ProductColorRepository colors,
             InventoryStockRepository inventory,
+            OrderItemRepository orderItems,
             SizeSetRepository sizeSets,
             SizeOptionRepository sizeOptions,
             SizeSetTemplateRepository setTemplates,
@@ -69,6 +74,7 @@ public class AdminService {
         this.products = products;
         this.colors = colors;
         this.inventory = inventory;
+        this.orderItems = orderItems;
         this.sizeSets = sizeSets;
         this.sizeOptions = sizeOptions;
         this.setTemplates = setTemplates;
@@ -194,7 +200,75 @@ public class AdminService {
     }
 
     public List<Product> products(Business business) {
-        return products.findByBusinessOrderByProductCodeAscNameAsc(business);
+        return products.findByBusinessOrderByCreatedAtDescIdDesc(business);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> products(
+            Business business,
+            String query,
+            Long categoryId,
+            String colorName,
+            String setName,
+            boolean inStockOnly,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String status,
+            String sort
+    ) {
+        String normalizedQuery = normalizeFilter(query);
+        String normalizedColor = normalizeFilter(colorName);
+        String normalizedSet = normalizeFilter(setName);
+        String normalizedStatus = normalizeFilter(status);
+        List<Product> filtered = products.findByBusinessOrderById(business).stream()
+                .filter(product -> normalizedQuery.isBlank()
+                        || contains(product.getProductCode(), normalizedQuery)
+                        || contains(product.getName(), normalizedQuery))
+                .filter(product -> categoryId == null
+                        || (product.getCategory() != null && product.getCategory().getId().equals(categoryId)))
+                .filter(product -> minPrice == null || product.getPrice().compareTo(minPrice) >= 0)
+                .filter(product -> maxPrice == null || product.getPrice().compareTo(maxPrice) <= 0)
+                .filter(product -> normalizedStatus.isBlank()
+                        || ("active".equals(normalizedStatus) && product.isActive())
+                        || ("inactive".equals(normalizedStatus) && !product.isActive()))
+                .filter(product -> normalizedColor.isBlank() || colors.findByProductOrderByName(product).stream()
+                        .anyMatch(color -> contains(color.getName(), normalizedColor)))
+                .filter(product -> normalizedSet.isBlank() || sizeSets.findByProductOrderByName(product).stream()
+                        .anyMatch(sizeSet -> contains(sizeSet.getName(), normalizedSet)
+                                || contains(sizeSet.getSizeLabels(), normalizedSet)
+                                || contains(sizeSet.getName() + " (" + sizeSet.getSizeLabels() + ")", normalizedSet)))
+                .filter(product -> !inStockOnly || hasAvailableSet(
+                        colors.findByProductOrderByName(product).stream().filter(ProductColor::isActive).toList(),
+                        sizeSets.findByProductOrderByName(product)))
+                .collect(Collectors.toCollection(ArrayList::new));
+        filtered.sort(adminProductComparator(sort));
+        return filtered;
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> productColorOptions(Business business) {
+        return products.findByBusinessOrderByName(business).stream()
+                .flatMap(product -> colors.findByProductOrderByName(product).stream())
+                .map(ProductColor::getName)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isBlank())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> productSetOptions(Business business) {
+        return products.findByBusinessOrderByName(business).stream()
+                .flatMap(product -> sizeSets.findByProductOrderByName(product).stream())
+                .map(sizeSet -> sizeSet.getName() + " (" + sizeSet.getSizeLabels() + ")")
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isBlank())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     @Transactional
@@ -342,6 +416,77 @@ public class AdminService {
         return inventory.findByProductColorOrderBySizeLabel(color);
     }
 
+    @Transactional
+    public Long deleteColor(Business business, Long colorId) {
+        ProductColor color = colors.findById(colorId).orElseThrow();
+        Product product = color.getProduct();
+        if (!product.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Colour does not belong to this business.");
+        }
+        if (!canDeleteColor(color)) {
+            throw new IllegalStateException("This colour cannot be deleted because it exists in one or more orders.");
+        }
+        Long productId = product.getId();
+        inventory.deleteAll(inventory.findByProductColorOrderBySizeLabel(color));
+        fileStorage.deleteByPath(color.getImagePath());
+        colors.delete(color);
+        return productId;
+    }
+
+    @Transactional
+    public void deleteProduct(Business business, Long productId) {
+        Product product = products.findById(productId).orElseThrow();
+        if (!product.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Product does not belong to this business.");
+        }
+        if (!canDeleteProduct(product)) {
+            throw new IllegalStateException("This product cannot be deleted because it exists in one or more orders. Mark it inactive instead.");
+        }
+        for (ProductColor color : colors.findByProductOrderByName(product)) {
+            inventory.deleteAll(inventory.findByProductColorOrderBySizeLabel(color));
+            fileStorage.deleteByPath(color.getImagePath());
+            colors.delete(color);
+        }
+        sizeSets.deleteAll(sizeSets.findByProductOrderByName(product));
+        products.delete(product);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canDeleteColor(ProductColor color) {
+        return color != null && color.getId() != null && !orderItems.existsByProductColorId(color.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canDeleteProduct(Product product) {
+        if (product == null || product.getId() == null) {
+            return false;
+        }
+        return colors.findByProductOrderByName(product).stream()
+                .noneMatch(this::hasOrderHistory);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Boolean> deletableProducts(List<Product> businessProducts) {
+        Map<Long, Boolean> deletable = new LinkedHashMap<>();
+        for (Product product : businessProducts) {
+            deletable.put(product.getId(), canDeleteProduct(product));
+        }
+        return deletable;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Boolean> deletableColors(List<ProductColor> productColors) {
+        Map<Long, Boolean> deletable = new LinkedHashMap<>();
+        for (ProductColor color : productColors) {
+            deletable.put(color.getId(), canDeleteColor(color));
+        }
+        return deletable;
+    }
+
+    private boolean hasOrderHistory(ProductColor color) {
+        return color.getId() != null && orderItems.existsByProductColorId(color.getId());
+    }
+
     public Map<Long, String> inventorySummaryByProduct(List<Product> businessProducts) {
         Map<Long, String> summaries = new LinkedHashMap<>();
         for (Product product : businessProducts) {
@@ -472,6 +617,41 @@ public class AdminService {
                 .map(this::normalizeSizeLabel)
                 .filter(size -> !size.isBlank())
                 .toList();
+    }
+
+    private Comparator<Product> adminProductComparator(String sort) {
+        String normalizedSort = normalizeFilter(sort);
+        Comparator<Product> createdDesc = Comparator
+                .comparing(Product::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .reversed()
+                .thenComparing(Product::getId, Comparator.nullsLast(Comparator.reverseOrder()));
+        return switch (normalizedSort) {
+            case "productid" -> Comparator.comparing(Product::getProductCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                    .thenComparing(Product::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "name" -> Comparator.comparing(Product::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                    .thenComparing(Product::getProductCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "price_asc" -> Comparator.comparing(Product::getPrice, Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(Product::getProductCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "price_desc" -> Comparator.comparing(Product::getPrice, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(Product::getProductCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "category" -> Comparator.comparing(this::categoryName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                    .thenComparing(Product::getProductCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "status" -> Comparator.comparing(Product::isActive).reversed()
+                    .thenComparing(createdDesc);
+            default -> createdDesc;
+        };
+    }
+
+    private String categoryName(Product product) {
+        return product.getCategory() == null ? null : product.getCategory().getName();
+    }
+
+    private boolean contains(String value, String normalizedFilter) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedFilter);
+    }
+
+    private String normalizeFilter(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     private String normalizeProductCode(String value) {

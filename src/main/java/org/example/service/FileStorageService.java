@@ -44,4 +44,23 @@ public class FileStorageService {
             throw new IllegalStateException("Could not store uploaded file", exception);
         }
     }
+
+    public void deleteByPath(String path) {
+        String id = storedFileId(path);
+        if (id != null) {
+            storedFiles.deleteById(id);
+        }
+    }
+
+    private String storedFileId(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String prefix = "/files/";
+        if (!path.startsWith(prefix)) {
+            return null;
+        }
+        String id = path.substring(prefix.length()).trim();
+        return id.isBlank() ? null : id;
+    }
 }
