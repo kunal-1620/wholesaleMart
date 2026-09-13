@@ -180,7 +180,7 @@ public class FileStorageService {
         storedFile.setStorageProvider(DATABASE_PROVIDER);
         storedFile.setSizeBytes(upload.data().length);
         storedFile.setData(upload.data());
-        storedFiles.save(storedFile);
+        saveMetadata(storedFile);
         return "/files/" + storedFile.getId();
     }
 
@@ -190,14 +190,19 @@ public class FileStorageService {
         String id = UUID.randomUUID().toString();
         String filename = folder + "-" + UUID.randomUUID() + upload.extension();
         String key = objectKey(businessId, folder, id, upload.extension());
-        r2Client.putObject(PutObjectRequest.builder()
-                        .bucket(bucket)
-                        .key(key)
-                        .contentType(upload.contentType())
-                        .contentLength((long) upload.data().length)
-                        .cacheControl(privateFile ? "private, no-store" : "public, max-age=2592000")
-                        .build(),
-                RequestBody.fromBytes(upload.data()));
+        try {
+            r2Client.putObject(PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(upload.contentType())
+                            .contentLength((long) upload.data().length)
+                            .cacheControl(privateFile ? "private, no-store" : "public, max-age=2592000")
+                            .build(),
+                    RequestBody.fromBytes(upload.data()));
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Could not upload R2 object {} to bucket {}", key, bucket, exception);
+            throw new IllegalStateException("Could not upload file to R2. Check R2 bucket names, access key permissions, and Render R2 environment variables.", exception);
+        }
 
         StoredFile storedFile = new StoredFile();
         storedFile.setId(id);
@@ -211,7 +216,12 @@ public class FileStorageService {
         if (!privateFile && r2PublicBaseUrl != null) {
             storedFile.setPublicUrl(r2PublicBaseUrl + "/" + key);
         }
-        storedFiles.save(storedFile);
+        try {
+            saveMetadata(storedFile);
+        } catch (RuntimeException exception) {
+            deleteR2Object(bucket, key);
+            throw exception;
+        }
         return "/files/" + storedFile.getId();
     }
 
@@ -223,13 +233,26 @@ public class FileStorageService {
             LOGGER.warn("Could not delete R2 object {} for stored file {} because R2 storage is not configured.", file.getObjectKey(), file.getId());
             return;
         }
+        deleteR2Object(bucketFor(file), file.getObjectKey());
+    }
+
+    private void saveMetadata(StoredFile storedFile) {
+        try {
+            storedFiles.save(storedFile);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Could not save metadata for stored file {}", storedFile.getId(), exception);
+            throw new IllegalStateException("Could not save uploaded file metadata. Check database migrations for the stored_files table.", exception);
+        }
+    }
+
+    private void deleteR2Object(String bucket, String key) {
         try {
             r2Client.deleteObject(DeleteObjectRequest.builder()
-                    .bucket(bucketFor(file))
-                    .key(file.getObjectKey())
+                    .bucket(bucket)
+                    .key(key)
                     .build());
         } catch (RuntimeException exception) {
-            LOGGER.warn("Could not delete R2 object {} for stored file {}", file.getObjectKey(), file.getId(), exception);
+            LOGGER.warn("Could not delete R2 object {} from bucket {}", key, bucket, exception);
         }
     }
 
