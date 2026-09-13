@@ -94,6 +94,29 @@ Use a JDBC URL in Render, not the raw Neon `postgresql://...` URL. If Neon shows
 
 Demo data is disabled by default in production. `APP_PLATFORM_ADMIN_PHONE` and `APP_PLATFORM_ADMIN_PIN` are required for a fresh hosted database so the first platform admin can log in.
 
-Uploaded business logos, product images, and payment proof screenshots are stored in the application database and served through authenticated file routes. This avoids local filesystem image storage for the initial hosted version, but it also means Neon free-tier storage can fill up quickly if many product images are uploaded.
+### Cloudflare R2 image storage
 
-Longer term, if upload volume grows, move file storage from database-backed files to S3/R2/Cloudinary while keeping the same stored URL pattern in the business/product/order records.
+By default, uploaded files use database-backed storage for local/dev compatibility. For production, set `APP_STORAGE_BACKEND=r2` to store new uploads in Cloudflare R2 instead of Neon.
+
+Required Render environment variables for R2:
+
+```text
+APP_STORAGE_BACKEND=r2
+R2_ENDPOINT=https://<cloudflare-account-id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=<r2-access-key-id>
+R2_SECRET_ACCESS_KEY=<r2-secret-access-key>
+R2_PUBLIC_BUCKET=<bucket-for-product-images-and-logos>
+R2_PRIVATE_BUCKET=<bucket-for-payment-screenshots>
+R2_PUBLIC_BASE_URL=https://<your-r2-public-custom-domain>
+```
+
+Storage behavior:
+
+- Product images and business logos are uploaded to `R2_PUBLIC_BUCKET`.
+- Payment proof screenshots are uploaded to `R2_PRIVATE_BUCKET`.
+- The database stores only file metadata and the R2 object key for new R2 uploads.
+- Existing old database-backed files continue working through the same `/files/{id}` route.
+- Public R2 files redirect to `R2_PUBLIC_BASE_URL` when configured.
+- Private payment screenshots continue to go through the authenticated app route.
+
+Create a Cloudflare R2 API token with Object Read & Write permissions for the selected buckets. Cloudflare's Java SDK guidance requires disabling chunked encoding for R2, which is already handled in the app's R2 client configuration.

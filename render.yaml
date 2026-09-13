@@ -12,7 +12,7 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
+        value: validate
       - key: SPRING_DATASOURCE_DRIVER
         value: org.postgresql.Driver
       - key: SPRING_DATASOURCE_URL
@@ -37,3 +37,17 @@ services:
         value: platform
       - key: APP_BOOTSTRAP_PAYMENT_INSTRUCTIONS
         value: Manual payment. Upload transaction proof after approval.
+      - key: APP_STORAGE_BACKEND
+        value: database
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_PUBLIC_BUCKET
+        sync: false
+      - key: R2_PRIVATE_BUCKET
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false

@@ -28,8 +28,17 @@ public class StoredFile {
     @Column(nullable = false)
     private String contentType;
 
+    @Column(nullable = false)
+    private String storageProvider = "database";
+
+    @Column(length = 1000)
+    private String objectKey;
+
+    @Column(length = 1000)
+    private String publicUrl;
+
     @JdbcTypeCode(SqlTypes.VARBINARY)
-    @Column(nullable = false, length = 15_728_640)
+    @Column(length = 15_728_640)
     private byte[] data;
 
     private LocalDateTime createdAt;
@@ -79,6 +88,30 @@ public class StoredFile {
 
     public void setContentType(String contentType) {
         this.contentType = contentType;
+    }
+
+    public String getStorageProvider() {
+        return storageProvider;
+    }
+
+    public void setStorageProvider(String storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public String getObjectKey() {
+        return objectKey;
+    }
+
+    public void setObjectKey(String objectKey) {
+        this.objectKey = objectKey;
+    }
+
+    public String getPublicUrl() {
+        return publicUrl;
+    }
+
+    public void setPublicUrl(String publicUrl) {
+        this.publicUrl = publicUrl;
     }
 
     public byte[] getData() {
