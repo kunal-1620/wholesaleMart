@@ -107,6 +107,11 @@
                 <p>
                     <span class="badge" th:each="stock : ${stockByColor[color.id]}" th:text="${stock.sizeLabel + ': ' + stock.quantity}"></span>
                 </p>
+                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/image(slug=${business.slug},id=${color.id})}" enctype="multipart/form-data">
+                    <label>Replace image</label>
+                    <input name="image" type="file" accept="image/*" required>
+                    <div class="actions"><button class="secondary">Save image</button></div>
+                </form>
                 <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/inventory(slug=${business.slug},id=${color.id})}">
                     <label>Update inventory</label>
                     <p class="muted" th:if="${#lists.isEmpty(productSizeLabels)}">Save fixed size sets on the product first. Inventory fields are created from the sizes present in those selected sets.</p>

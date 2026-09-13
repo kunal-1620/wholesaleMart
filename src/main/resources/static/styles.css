@@ -231,6 +231,77 @@ pre {
     margin-bottom: 4px;
 }
 
+.catalog-carousel {
+    background:
+            linear-gradient(135deg, rgba(17, 107, 91, 0.10), rgba(214, 146, 43, 0.10)),
+            #e8eef2;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+}
+
+.carousel-track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+}
+
+.carousel-track::-webkit-scrollbar {
+    display: none;
+}
+
+.carousel-slide {
+    flex: 0 0 100%;
+    margin: 0;
+    scroll-snap-align: start;
+}
+
+.catalog-carousel .image {
+    border-radius: 0;
+    height: clamp(220px, 24vw, 300px);
+    margin: 0;
+}
+
+.carousel-overlay {
+    align-items: center;
+    background: rgba(16, 32, 29, 0.76);
+    border-radius: 999px;
+    bottom: 12px;
+    color: white;
+    display: inline-flex;
+    gap: 10px;
+    left: 12px;
+    max-width: calc(100% - 24px);
+    padding: 7px 11px;
+    position: absolute;
+}
+
+.carousel-overlay span {
+    font-size: 13px;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.carousel-overlay small {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.card-actions {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+    margin-top: auto;
+}
+
+.catalog-cart-summary {
+    margin-top: auto;
+}
+
 .stats {
     display: grid;
     gap: 16px;
@@ -592,6 +663,46 @@ button.danger:hover,
 
 .dialog-actions form {
     margin: 0;
+}
+
+.cart-dialog {
+    background: transparent;
+    border: 0;
+    max-width: min(680px, calc(100vw - 28px));
+    padding: 0;
+    width: 100%;
+}
+
+.cart-dialog::backdrop {
+    backdrop-filter: blur(8px);
+    background: rgba(10, 31, 35, 0.50);
+}
+
+.cart-dialog-card {
+    background:
+            radial-gradient(circle at top left, rgba(17, 107, 91, 0.12), transparent 16rem),
+            var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-height: min(86vh, 760px);
+    overflow-y: auto;
+    padding: clamp(22px, 4vw, 32px);
+    position: relative;
+}
+
+.dialog-close {
+    background: #eef3f7;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    box-shadow: none;
+    color: var(--ink);
+    min-height: 34px;
+    min-width: 34px;
+    padding: 0;
+    position: absolute;
+    right: 16px;
+    top: 16px;
 }
 
 .danger-zone {

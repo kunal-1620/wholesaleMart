@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Controller
@@ -61,9 +62,14 @@ public class ShopController {
         CurrentUser user = current(session);
         Business business = orderService.business(user.businessId());
         List<Product> products = orderService.catalogProducts(business, user.tier(), q, categoryId, colorName, setName, inStockOnly, minPrice, maxPrice, sort);
+        Map<Long, List<ProductColor>> colorsByProduct = orderService.availableColorsByProduct(products);
+        Map<Long, List<SizeSet>> sizeSetsByProduct = orderService.sizeSetsByProduct(products);
         model.addAttribute("business", business);
         model.addAttribute("products", products);
-        model.addAttribute("productImageById", orderService.primaryImageByProduct(products));
+        model.addAttribute("colorsByProduct", colorsByProduct);
+        model.addAttribute("sizeSetsByProduct", sizeSetsByProduct);
+        model.addAttribute("setPriceByProduct", orderService.setPriceByProduct(products));
+        model.addAttribute("cartSetCountsByProduct", cartSetCountLabelsByProduct(products, colorsByProduct, cart(session)));
         model.addAttribute("categories", orderService.catalogCategories(business));
         model.addAttribute("colorOptions", orderService.catalogColorOptions(business, user.tier()));
         model.addAttribute("setOptions", orderService.catalogSetOptions(business, user.tier()));
@@ -109,14 +115,14 @@ public class ShopController {
         CurrentUser user = current(session);
         if (!product.getBusiness().getId().equals(user.businessId()) || product.getMinimumTierRequired() < user.tier() || !product.isActive()) {
             redirectAttributes.addFlashAttribute("message", "That product is not available for your account.");
-            return businessRedirect(session, "/shop");
+            return addToCartRedirect(session, form.getFirst("returnTo"), product);
         }
         List<CartLine> additions = new ArrayList<>();
         for (SizeSet sizeSet : orderService.sizeSets(product)) {
             Long sizeSetId = sizeSet.getId();
             if (!sizeSet.getProduct().getId().equals(product.getId())) {
                 redirectAttributes.addFlashAttribute("error", "Selected size set does not belong to this product.");
-                return businessRedirect(session, "/shop/products/" + product.getId());
+                return addToCartRedirect(session, form.getFirst("returnTo"), product);
             }
             int quantity = parseQuantity(form.getFirst("quantity_" + sizeSetId));
             if (quantity <= 0) {
@@ -137,7 +143,7 @@ public class ShopController {
         }
         if (additions.isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "Enter quantity greater than 0 for at least one fixed size set.");
-            return businessRedirect(session, "/shop/products/" + product.getId());
+            return addToCartRedirect(session, form.getFirst("returnTo"), product);
         }
         List<CartLine> cart = cart(session);
         List<CartLine> cartWithAdditions = new ArrayList<>(cart);
@@ -145,11 +151,11 @@ public class ShopController {
         List<String> stockIssues = orderService.cartStockIssues(cartWithAdditions);
         if (!stockIssues.isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "Some selected sets are not available in the requested quantity.\n" + String.join("\n", stockIssues));
-            return businessRedirect(session, "/shop/products/" + product.getId());
+            return addToCartRedirect(session, form.getFirst("returnTo"), product);
         }
         mergeCartLines(cart, additions);
         redirectAttributes.addFlashAttribute("message", additions.size() == 1 ? "Added to cart." : "Added " + additions.size() + " sets to cart.");
-        return businessRedirect(session, "/shop/products/" + product.getId());
+        return addToCartRedirect(session, form.getFirst("returnTo"), product);
     }
 
     @GetMapping({"/cart", "/b/{businessSlug}/cart"})
@@ -369,6 +375,7 @@ public class ShopController {
                 continue;
             }
             existing.setProductCode(addition.getProductCode());
+            existing.setProductId(addition.getProductId());
             existing.setProductName(addition.getProductName());
             existing.setColorName(addition.getColorName());
             existing.setSizeSetName(addition.getSizeSetName());
@@ -376,6 +383,46 @@ public class ShopController {
             existing.setPriceEach(addition.getPriceEach());
             existing.setQuantity(existing.getQuantity() + addition.getQuantity());
         }
+    }
+
+    private String addToCartRedirect(HttpSession session, String returnTo, Product product) {
+        if (returnTo == null || returnTo.isBlank()) {
+            return businessRedirect(session, "/shop/products/" + product.getId());
+        }
+        CurrentUser currentUser = current(session);
+        String businessPrefix = "/b/" + currentUser.businessSlug() + "/";
+        if (returnTo.startsWith(businessPrefix)) {
+            return "redirect:" + returnTo;
+        }
+        if (returnTo.startsWith("/shop") || returnTo.startsWith("/cart") || returnTo.startsWith("/orders")) {
+            return businessRedirect(session, returnTo);
+        }
+        return businessRedirect(session, "/shop/products/" + product.getId());
+    }
+
+    private Map<Long, List<String>> cartSetCountLabelsByProduct(
+            List<Product> products,
+            Map<Long, List<ProductColor>> colorsByProduct,
+            List<CartLine> cart
+    ) {
+        Map<Long, List<String>> labelsByProduct = new LinkedHashMap<>();
+        for (Product product : products) {
+            List<String> labels = new ArrayList<>();
+            List<ProductColor> productColors = colorsByProduct.getOrDefault(product.getId(), List.of());
+            for (ProductColor color : productColors) {
+                int quantity = cart.stream()
+                        .filter(line -> Objects.equals(product.getId(), line.getProductId())
+                                || Objects.equals(color.getId(), line.getProductColorId()))
+                        .filter(line -> Objects.equals(color.getId(), line.getProductColorId()))
+                        .mapToInt(CartLine::getQuantity)
+                        .sum();
+                if (quantity > 0) {
+                    labels.add(color.getName() + ": " + quantity + " " + (quantity == 1 ? "set" : "sets"));
+                }
+            }
+            labelsByProduct.put(product.getId(), labels);
+        }
+        return labelsByProduct;
     }
 
     private Map<Long, List<String>> cartQuantityLabelsByColor(List<ProductColor> colors, List<SizeSet> sizeSets, List<CartLine> cart) {

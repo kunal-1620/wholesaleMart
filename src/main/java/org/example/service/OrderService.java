@@ -167,6 +167,33 @@ public class OrderService {
         return imageByProduct;
     }
 
+    @Transactional(readOnly = true)
+    public Map<Long, List<ProductColor>> availableColorsByProduct(List<Product> catalogProducts) {
+        Map<Long, List<ProductColor>> colorsByProduct = new LinkedHashMap<>();
+        for (Product product : catalogProducts) {
+            colorsByProduct.put(product.getId(), availableColors(product));
+        }
+        return colorsByProduct;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, List<SizeSet>> sizeSetsByProduct(List<Product> catalogProducts) {
+        Map<Long, List<SizeSet>> sizeSetsByProduct = new LinkedHashMap<>();
+        for (Product product : catalogProducts) {
+            sizeSetsByProduct.put(product.getId(), sizeSets(product));
+        }
+        return sizeSetsByProduct;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Map<Long, BigDecimal>> setPriceByProduct(List<Product> catalogProducts) {
+        Map<Long, Map<Long, BigDecimal>> setPriceByProduct = new LinkedHashMap<>();
+        for (Product product : catalogProducts) {
+            setPriceByProduct.put(product.getId(), setPriceBySet(product));
+        }
+        return setPriceByProduct;
+    }
+
     public Map<Long, BigDecimal> setPriceBySet(Product product) {
         return sizeSets(product).stream()
                 .collect(Collectors.toMap(SizeSet::getId, sizeSet -> setPrice(product, sizeSet), (left, right) -> left, LinkedHashMap::new));
@@ -186,6 +213,13 @@ public class OrderService {
 
     public List<ProductColor> colors(Product product) {
         return colors.findByProductOrderByName(product).stream().filter(ProductColor::isActive).toList();
+    }
+
+    public List<ProductColor> availableColors(Product product) {
+        List<SizeSet> productSizeSets = sizeSets(product);
+        return colors(product).stream()
+                .filter(color -> hasAvailableSet(color, productSizeSets))
+                .toList();
     }
 
     public List<SizeSet> sizeSets(Product product) {
@@ -339,7 +373,7 @@ public class OrderService {
             throw new IllegalStateException("Payment proof can only be submitted after approval.");
         }
         order.setTransactionId(transactionId);
-        String proofPath = fileStorage.store(proof, "payments", order.getBusiness().getId());
+        String proofPath = fileStorage.replace(proof, order.getPaymentProofPath(), "payments", order.getBusiness().getId());
         if (proofPath != null) {
             order.setPaymentProofPath(proofPath);
         }
@@ -363,7 +397,7 @@ public class OrderService {
             throw new IllegalStateException("Owner can enter payment details only after order approval.");
         }
         order.setTransactionId(transactionId);
-        String proofPath = fileStorage.store(proof, "payments", order.getBusiness().getId());
+        String proofPath = fileStorage.replace(proof, order.getPaymentProofPath(), "payments", order.getBusiness().getId());
         if (proofPath != null) {
             order.setPaymentProofPath(proofPath);
         }
@@ -591,15 +625,20 @@ public class OrderService {
         if (productSizeSets.isEmpty()) {
             return false;
         }
-        for (ProductColor color : colors(product)) {
-            Map<String, Integer> availableBySize = inventory.findByProductColorOrderBySizeLabel(color).stream()
-                    .collect(Collectors.toMap(stock -> stock.getSizeLabel().toUpperCase(), InventoryStock::getQuantity, (left, right) -> left));
-            for (SizeSet sizeSet : productSizeSets) {
-                boolean setAvailable = sizes(sizeSet.getSizeLabels()).stream()
-                        .allMatch(size -> availableBySize.getOrDefault(size.toUpperCase(), 0) > 0);
-                if (setAvailable) {
-                    return true;
-                }
+        return colors(product).stream().anyMatch(color -> hasAvailableSet(color, productSizeSets));
+    }
+
+    private boolean hasAvailableSet(ProductColor color, List<SizeSet> productSizeSets) {
+        if (productSizeSets.isEmpty()) {
+            return false;
+        }
+        Map<String, Integer> availableBySize = inventory.findByProductColorOrderBySizeLabel(color).stream()
+                .collect(Collectors.toMap(stock -> stock.getSizeLabel().toUpperCase(), InventoryStock::getQuantity, (left, right) -> left));
+        for (SizeSet sizeSet : productSizeSets) {
+            boolean setAvailable = sizes(sizeSet.getSizeLabels()).stream()
+                    .allMatch(size -> availableBySize.getOrDefault(size.toUpperCase(), 0) > 0);
+            if (setAvailable) {
+                return true;
             }
         }
         return false;

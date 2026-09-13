@@ -318,6 +318,23 @@ public class AdminController {
         return adminRedirect(session, "/products/" + color.getProduct().getId() + "/edit");
     }
 
+    @PostMapping("/colors/{id}/image")
+    public String replaceColorImage(
+            HttpSession session,
+            @PathVariable Long id,
+            @RequestParam MultipartFile image,
+            RedirectAttributes redirectAttributes
+    ) {
+        Long productId = adminService.color(id).getProduct().getId();
+        try {
+            productId = adminService.replaceColorImage(business(session), id, image);
+            redirectAttributes.addFlashAttribute("message", "Colour image replaced and old image storage cleaned up.");
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
+        return adminRedirect(session, "/products/" + productId + "/edit");
+    }
+
     @PostMapping("/colors/{id}/delete")
     public String deleteColor(
             HttpSession session,

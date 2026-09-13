@@ -355,6 +355,24 @@ public class AdminService {
     }
 
     @Transactional
+    public Long replaceColorImage(Business business, Long colorId, MultipartFile image) {
+        ProductColor color = colors.findById(colorId).orElseThrow();
+        Product product = color.getProduct();
+        if (!product.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Colour does not belong to this business.");
+        }
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("Select an image to upload.");
+        }
+        String imagePath = fileStorage.replace(image, color.getImagePath(), "products", business.getId());
+        if (imagePath != null) {
+            color.setImagePath(imagePath);
+            colors.save(color);
+        }
+        return product.getId();
+    }
+
+    @Transactional
     public void activateProduct(Business business, Long productId) {
         Product product = products.findById(productId).orElseThrow();
         if (!product.getBusiness().getId().equals(business.getId())) {

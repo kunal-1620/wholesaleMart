@@ -13,6 +13,7 @@
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}"><pre th:text="${error}"></pre></div>
     <h1>Products</h1>
     <p class="muted">Showing active products available for your account.</p>
     <section class="card" style="margin-bottom:18px">
@@ -76,16 +77,109 @@
     </section>
     <section class="grid">
         <article class="card product-card" th:each="product : ${products}">
-            <img class="image" th:src="${productImageById[product.id] ?: '/placeholder-logo.svg'}" alt="">
+            <div class="catalog-carousel" th:attr="data-colour-label-id=${'colourLabel-' + product.id}">
+                <div class="carousel-track">
+                    <figure class="carousel-slide" th:each="color : ${colorsByProduct[product.id]}" th:attr="data-colour-name=${color.name}">
+                        <img class="image" th:src="${color.imagePath ?: '/placeholder-logo.svg'}" th:alt="${product.name + ' - ' + color.name}">
+                    </figure>
+                </div>
+                <div class="carousel-overlay">
+                    <span th:id="${'colourLabel-' + product.id}" th:text="${#lists.isEmpty(colorsByProduct[product.id]) ? 'No colour' : colorsByProduct[product.id][0].name}">Blue</span>
+                    <small th:if="${colorsByProduct[product.id] != null && colorsByProduct[product.id].size() > 1}">Swipe colours</small>
+                </div>
+            </div>
             <p><span class="badge" th:text="${product.productCode}">P0001</span></p>
             <h2 th:text="${product.name}"></h2>
             <p class="muted" th:text="${product.category != null ? product.category.name : ''}"></p>
             <p th:text="${product.description}"></p>
             <p><strong th:text="${product.price}"></strong> per item.</p>
-            <a class="button" th:href="@{/b/{slug}/shop/products/{id}(slug=${business.slug},id=${product.id})}">View</a>
+            <div class="cart-summary catalog-cart-summary" th:unless="${#lists.isEmpty(cartSetCountsByProduct[product.id])}">
+                <h4>Added to cart</h4>
+                <p class="badge-row">
+                    <span class="badge cart-badge" th:each="cartQty : ${cartSetCountsByProduct[product.id]}" th:text="${cartQty}">Blue: 2 sets</span>
+                </p>
+            </div>
+            <div class="card-actions">
+                <a class="button secondary" th:href="@{/b/{slug}/shop/products/{id}(slug=${business.slug},id=${product.id})}">View</a>
+                <button type="button" th:attr="data-dialog-id=${'addDialog-' + product.id}">Add to Cart</button>
+            </div>
+            <dialog class="cart-dialog" th:id="${'addDialog-' + product.id}">
+                <section class="cart-dialog-card">
+                    <button class="dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+                    <p><span class="badge" th:text="${product.productCode}">P0001</span></p>
+                    <h2 th:text="${'Add ' + product.name + ' to cart'}">Add to cart</h2>
+                    <p class="muted">Select a colour and enter quantity for each fixed size set. Keep quantity as 0 for sets you do not want.</p>
+                    <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}">
+                        <input type="hidden" name="returnTo" th:value="@{/shop(q=${q},categoryId=${categoryId},colorName=${colorName},setName=${setName},inStockOnly=${inStockOnly},minPrice=${minPrice},maxPrice=${maxPrice},sort=${sort})}">
+                        <div class="grid">
+                            <div>
+                                <label>Colour to add</label>
+                                <select name="productColorId" required>
+                                    <option th:each="color : ${colorsByProduct[product.id]}" th:value="${color.id}" th:text="${color.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <h3>Quantity by set</h3>
+                        <div class="grid">
+                            <div th:each="set : ${sizeSetsByProduct[product.id]}">
+                                <label th:for="${'catalog_quantity_' + product.id + '_' + set.id}" th:text="${set.name + ' (' + set.sizeLabels + ') - Set price: ' + setPriceByProduct[product.id][set.id]}"></label>
+                                <input th:id="${'catalog_quantity_' + product.id + '_' + set.id}" th:name="${'quantity_' + set.id}" type="number" min="0" step="1" value="0">
+                            </div>
+                        </div>
+                        <div class="dialog-actions">
+                            <button type="submit">Add to cart</button>
+                            <button class="secondary" type="button" data-close-dialog>Cancel</button>
+                        </div>
+                    </form>
+                </section>
+            </dialog>
         </article>
     </section>
     <p class="muted" th:if="${#lists.isEmpty(products)}">No products matched these filters.</p>
 </main>
+<script>
+    document.querySelectorAll("[data-dialog-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const dialog = document.getElementById(button.dataset.dialogId);
+            if (dialog) {
+                dialog.showModal();
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+        button.addEventListener("click", () => button.closest("dialog")?.close());
+    });
+
+    document.querySelectorAll(".cart-dialog").forEach((dialog) => {
+        dialog.addEventListener("click", (event) => {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    });
+
+    document.querySelectorAll(".carousel-track").forEach((track) => {
+        const carousel = track.closest(".catalog-carousel");
+        const label = carousel ? document.getElementById(carousel.dataset.colourLabelId) : null;
+        const slides = Array.from(track.querySelectorAll(".carousel-slide"));
+        if (!label || slides.length === 0) {
+            return;
+        }
+        let pending = false;
+        const updateLabel = () => {
+            pending = false;
+            const index = Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / Math.max(1, track.clientWidth))));
+            label.textContent = slides[index].dataset.colourName || "";
+        };
+        track.addEventListener("scroll", () => {
+            if (!pending) {
+                pending = true;
+                window.requestAnimationFrame(updateLabel);
+            }
+        }, {passive: true});
+        updateLabel();
+    });
+</script>
 </body>
 </html>

@@ -61,7 +61,7 @@ public class PlatformService {
             throw new IllegalArgumentException("Business logo is required.");
         }
         business = businesses.save(business);
-        String logoPath = fileStorage.store(logo, "business-logos", business.getId());
+        String logoPath = fileStorage.replace(logo, business.getLogoPath(), "business-logos", business.getId());
         if (logoPath != null) {
             business.setLogoPath(logoPath);
         }
