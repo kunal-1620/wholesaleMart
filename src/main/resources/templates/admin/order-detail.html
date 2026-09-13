@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -48,17 +48,17 @@
         </div>
         <div class="actions">
             <a class="button secondary" th:href="@{/b/{slug}/admin/orders/{id}/invoice.pdf(slug=${business.slug},id=${order.id})}">Download invoice PDF</a>
-            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/approve(slug=${business.slug},id=${order.id})}"><button>Approve</button></form>
-            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/reject(slug=${business.slug},id=${order.id})}"><button class="danger">Reject</button></form>
-            <form class="inline-form" th:if="${order.status.name() == 'PAYMENT_SUBMITTED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/verify-payment(slug=${business.slug},id=${order.id})}"><button>Verify payment and reduce inventory</button></form>
-            <form class="inline-form" th:if="${order.status.name() == 'PAID_CONFIRMED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/complete(slug=${business.slug},id=${order.id})}"><button>Mark complete</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/approve(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button>Approve</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/reject(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="danger">Reject</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PAYMENT_SUBMITTED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/verify-payment(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button>Verify payment and reduce inventory</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PAID_CONFIRMED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/complete(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button>Mark complete</button></form>
         </div>
     </section>
 
     <section class="card" style="margin-top:18px" th:if="${order.status.name() == 'APPROVED_AWAITING_PAYMENT' || order.status.name() == 'PAYMENT_SUBMITTED' || order.status.name() == 'OUT_OF_STOCK'}">
         <h2>Owner Payment Entry</h2>
         <p class="muted">Use this when the customer sends payment details outside the portal. Saving payment details moves the order to payment submitted; verifying payment deducts inventory.</p>
-        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data">
+        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div><label>Transaction ID</label><input name="transactionId" th:value="${order.transactionId}" required></div>
                 <div><label>Payment screenshot</label><input name="proof" type="file" accept="image/*"></div>
@@ -85,11 +85,11 @@
                 <td th:text="${item.outOfStockReason ?: '-'}"></td>
                 <td th:if="${order.status.name() != 'PAID_CONFIRMED' && order.status.name() != 'COMPLETED'}">
                     <div class="row-actions">
-                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/quantity(slug=${business.slug},id=${order.id}, itemId=${item.id})}">
+                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/quantity(slug=${business.slug},id=${order.id}, itemId=${item.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <input type="number" name="quantity" min="1" th:value="${item.quantity}">
                             <button class="secondary">Update qty</button>
                         </form>
-                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/remove(slug=${business.slug},id=${order.id}, itemId=${item.id})}">
+                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/remove(slug=${business.slug},id=${order.id}, itemId=${item.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <button class="danger">Remove</button>
                         </form>
                     </div>
@@ -102,7 +102,7 @@
     <section class="card" style="margin-top:18px" th:if="${order.status.name() != 'PAID_CONFIRMED' && order.status.name() != 'COMPLETED'}">
         <h2>Add new Items</h2>
         <p class="muted">Add replacement colour/set options before final payment. Use the Items section above to update quantities or remove unavailable items.</p>
-        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/items(slug=${business.slug},id=${order.id})}">
+        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/items(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div>
                     <label>Product colour</label>

@@ -91,11 +91,26 @@ public class AdminService {
         return users.findByBusinessAndRoleOrderByName(business, Role.CUSTOMER);
     }
 
+    public UserAccount customer(Business business, Long id) {
+        UserAccount customer = users.findById(id).orElseThrow();
+        if (customer.getBusiness() == null || !customer.getBusiness().getId().equals(business.getId())
+                || customer.getRole() != Role.CUSTOMER) {
+            throw new IllegalArgumentException("Customer does not belong to this business.");
+        }
+        return customer;
+    }
+
     @Transactional
     public void saveCustomer(Business business, Long id, String name, String companyName, String phone, String pin, int tier, boolean active, String address) {
         UserAccount customer = id == null
                 ? users.findByBusinessAndPhone(business, authService.normalizePhone(phone)).orElseGet(UserAccount::new)
                 : users.findById(id).orElseThrow();
+        if (customer.getBusiness() != null && !customer.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Customer does not belong to this business.");
+        }
+        if (customer.getRole() != null && customer.getRole() != Role.CUSTOMER) {
+            throw new IllegalArgumentException("Only customer accounts can be edited here.");
+        }
         customer.setBusiness(business);
         customer.setName(name);
         customer.setCompanyName(companyName);
@@ -410,8 +425,24 @@ public class AdminService {
         return products.findById(id).orElseThrow();
     }
 
+    public Product product(Business business, Long id) {
+        Product product = product(id);
+        if (!product.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Product does not belong to this business.");
+        }
+        return product;
+    }
+
     public ProductColor color(Long id) {
         return colors.findById(id).orElseThrow();
+    }
+
+    public ProductColor color(Business business, Long id) {
+        ProductColor color = color(id);
+        if (!color.getProduct().getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Colour does not belong to this business.");
+        }
+        return color;
     }
 
     public List<ProductColor> colors(Product product) {

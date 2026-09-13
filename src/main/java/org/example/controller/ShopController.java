@@ -249,21 +249,8 @@ public class ShopController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo
     ) {
         UserAccount customer = orderService.user(current(session).userId());
-        List<CustomerOrder> orders = orderService.ordersForCustomer(customer);
         OrderStatus selectedStatus = parseOrderStatus(status);
-        if (selectedStatus != null) {
-            orders = orders.stream().filter(order -> order.getStatus() == selectedStatus).toList();
-        }
-        if (createdFrom != null) {
-            orders = orders.stream()
-                    .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isBefore(createdFrom))
-                    .toList();
-        }
-        if (createdTo != null) {
-            orders = orders.stream()
-                    .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isAfter(createdTo))
-                    .toList();
-        }
+        List<CustomerOrder> orders = orderService.ordersForCustomer(customer, selectedStatus, createdFrom, createdTo);
         model.addAttribute("orders", orders);
         model.addAttribute("statuses", OrderStatus.values());
         model.addAttribute("selectedStatus", selectedStatus);
@@ -274,8 +261,10 @@ public class ShopController {
 
     @GetMapping({"/orders/{id}", "/b/{businessSlug}/orders/{id}"})
     public String orderDetail(@PathVariable Long id, HttpSession session, Model model) {
-        CustomerOrder order = orderService.order(id);
-        if (!order.getCustomer().getId().equals(current(session).userId())) {
+        CustomerOrder order;
+        try {
+            order = orderService.orderForCustomer(id, current(session).userId());
+        } catch (IllegalArgumentException exception) {
             return businessRedirect(session, "/orders");
         }
         List<OrderItem> items = orderService.items(order);
@@ -289,8 +278,10 @@ public class ShopController {
 
     @GetMapping({"/orders/{id}/invoice.pdf", "/b/{businessSlug}/orders/{id}/invoice.pdf"})
     public ResponseEntity<byte[]> invoice(@PathVariable Long id, HttpSession session) {
-        CustomerOrder order = orderService.order(id);
-        if (!order.getCustomer().getId().equals(current(session).userId())) {
+        CustomerOrder order;
+        try {
+            order = orderService.orderForCustomer(id, current(session).userId());
+        } catch (IllegalArgumentException exception) {
             return ResponseEntity.notFound().build();
         }
         byte[] pdf = invoicePdfService.invoice(order, orderService.items(order));
@@ -323,8 +314,12 @@ public class ShopController {
             @RequestParam(required = false) MultipartFile proof,
             RedirectAttributes redirectAttributes
     ) {
-        orderService.submitPaymentProof(id, transactionId, proof);
-        redirectAttributes.addFlashAttribute("message", "Payment proof submitted. Owner will verify stock and payment.");
+        try {
+            orderService.submitPaymentProof(id, current(session).userId(), transactionId, proof);
+            redirectAttributes.addFlashAttribute("message", "Payment proof submitted. Owner will verify stock and payment.");
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
         return businessRedirect(session, "/orders/" + id);
     }
 

@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -17,7 +17,7 @@
     <section class="card">
         <h1>Categories</h1>
         <p class="muted">Category names are unique per business and are selected while adding products.</p>
-        <form method="post" th:action="@{/b/{slug}/admin/categories(slug=${business.slug})}">
+        <form method="post" th:action="@{/b/{slug}/admin/categories(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div><label>Category name</label><input name="name" required></div>
             </div>
@@ -32,7 +32,7 @@
             <tr th:each="category : ${categories}">
                 <td th:text="${category.name}"></td>
                 <td>
-                    <form method="post" th:action="@{/b/{slug}/admin/categories(slug=${business.slug})}">
+                    <form method="post" th:action="@{/b/{slug}/admin/categories(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <input type="hidden" name="id" th:value="${category.id}">
                         <div class="grid">
                             <div><label>Name</label><input name="name" th:value="${category.name}" required></div>

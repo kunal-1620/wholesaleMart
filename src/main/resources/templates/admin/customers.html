@@ -9,13 +9,13 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
     <section class="card">
         <h2>Add Customer</h2>
-        <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}">
+        <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div><label>Name</label><input name="name" required></div>
                 <div><label>Business name</label><input name="companyName" required></div>
@@ -40,7 +40,7 @@
                 <td th:text="${customer.active ? 'Active' : 'Inactive'}"></td>
                 <td><a th:href="@{/b/{slug}/admin/customers/{id}/activity(slug=${business.slug},id=${customer.id})}">View activity</a></td>
                 <td>
-                    <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}">
+                    <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <input type="hidden" name="id" th:value="${customer.id}">
                         <input type="hidden" name="companyName" th:value="${customer.companyName}">
                         <input type="hidden" name="address" th:value="${customer.address}">

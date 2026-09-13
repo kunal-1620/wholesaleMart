@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -20,7 +20,7 @@
         <p><strong>Total:</strong> <span th:text="${order.totalAmount}"></span></p>
         <div class="actions">
             <a class="button secondary" th:href="@{/b/{slug}/orders/{id}/invoice.pdf(slug=${business.slug},id=${order.id})}">Download invoice PDF</a>
-            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}">
+            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                 <button class="danger">Cancel order</button>
             </form>
         </div>
@@ -29,7 +29,7 @@
         <div class="notice" th:if="${order.status.name() == 'APPROVED_AWAITING_PAYMENT'}">
             <h3>Payment Instructions</h3>
             <p th:text="${business.paymentInstructions}"></p>
-            <form method="post" th:action="@{/b/{slug}/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data">
+            <form method="post" th:action="@{/b/{slug}/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                 <label>Transaction ID</label>
                 <input name="transactionId" required>
                 <label>Payment screenshot</label>
@@ -41,7 +41,7 @@
             <h3>Some items went out of stock</h3>
             <p>The owner can suggest alternatives. You can upload updated payment proof again after resolving the order.</p>
             <pre th:text="${order.outOfStockSummary}"></pre>
-            <form method="post" th:action="@{/b/{slug}/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data">
+            <form method="post" th:action="@{/b/{slug}/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                 <label>Transaction ID</label>
                 <input name="transactionId" th:value="${order.transactionId}" required>
                 <label>Payment screenshot</label>

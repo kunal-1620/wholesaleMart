@@ -19,7 +19,7 @@
         <p class="muted" th:if="${business != null}">No public sign-up. Login works only for owner-created admin and customer accounts for this business.</p>
         <p class="muted" th:if="${business == null}">This common login is only for the platform/superadmin account. Business owners and customers should use their business URL.</p>
         <div class="notice error" th:if="${error}" th:text="${error}"></div>
-        <form method="post" th:action="${loginAction ?: '/login'}">
+        <form method="post" th:action="${loginAction ?: '/login'}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <label for="phone">Phone number</label>
             <input id="phone" name="phone" inputmode="tel" required>
             <label for="pin">PIN</label>
@@ -28,7 +28,6 @@
                 <button type="submit">Login</button>
             </div>
         </form>
-        <p class="muted" th:if="${business == null}">Platform admin: 7000000000 / 0000</p>
     </section>
 </main>
 </body>

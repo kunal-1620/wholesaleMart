@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -109,7 +109,7 @@
                     <p><span class="badge" th:text="${product.productCode}">P0001</span></p>
                     <h2 th:text="${'Add ' + product.name + ' to cart'}">Add to cart</h2>
                     <p class="muted">Select a colour and enter quantity for each fixed size set. Keep quantity as 0 for sets you do not want.</p>
-                    <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}">
+                    <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <input type="hidden" name="returnTo" th:value="@{/shop(q=${q},categoryId=${categoryId},colorName=${colorName},setName=${setName},inStockOnly=${inStockOnly},minPrice=${minPrice},maxPrice=${maxPrice},sort=${sort})}">
                         <div class="grid">
                             <div>

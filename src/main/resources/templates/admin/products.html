@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -106,7 +106,7 @@
                 <td>
                     <div class="row-actions">
                         <a th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${product.id})}">Edit</a>
-                        <form class="inline-form" th:if="${deletableProducts[product.id]}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}">
+                        <form class="inline-form" th:if="${deletableProducts[product.id]}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <button class="danger icon-button" title="Delete product" aria-label="Delete product">🗑</button>
                         </form>
                         <span class="muted tiny-note" th:if="${!deletableProducts[product.id]}">Has orders</span>

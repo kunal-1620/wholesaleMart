@@ -45,15 +45,19 @@ public class AuthController {
 
     @PostMapping("/login")
     public String doLogin(@RequestParam String phone, @RequestParam String pin, HttpSession session, Model model) {
-        return authService.login(phone, pin, session)
-                .map(user -> {
-                    return "redirect:/platform";
-                })
-                .orElseGet(() -> {
-                    model.addAttribute("loginAction", "/login");
-                    model.addAttribute("error", "Invalid platform admin phone/PIN or inactive account.");
-                    return "login";
-                });
+        try {
+            return authService.login(phone, pin, session)
+                    .map(user -> "redirect:/platform")
+                    .orElseGet(() -> {
+                        model.addAttribute("loginAction", "/login");
+                        model.addAttribute("error", "Invalid platform admin phone/PIN or inactive account.");
+                        return "login";
+                    });
+        } catch (IllegalStateException exception) {
+            model.addAttribute("loginAction", "/login");
+            model.addAttribute("error", exception.getMessage());
+            return "login";
+        }
     }
 
     @GetMapping("/b/{slug}/login")
@@ -67,16 +71,15 @@ public class AuthController {
     @PostMapping("/b/{slug}/login")
     public String doBusinessLogin(@PathVariable String slug, @RequestParam String phone, @RequestParam String pin, HttpSession session, Model model) {
         Business business = business(slug);
-        return authService.login(business, phone, pin, session)
-                .map(user -> user.role() == Role.CUSTOMER
-                        ? "redirect:/b/" + business.getSlug() + "/shop"
-                        : "redirect:/b/" + business.getSlug() + "/admin")
-                .orElseGet(() -> {
-                    model.addAttribute("business", business);
-                    model.addAttribute("loginAction", "/b/" + business.getSlug() + "/login");
-                    model.addAttribute("error", "Invalid phone/PIN for this business or inactive account.");
-                    return "login";
-                });
+        try {
+            return authService.login(business, phone, pin, session)
+                    .map(user -> user.role() == Role.CUSTOMER
+                            ? "redirect:/b/" + business.getSlug() + "/shop"
+                            : "redirect:/b/" + business.getSlug() + "/admin")
+                    .orElseGet(() -> businessLoginError(business, "Invalid phone/PIN for this business or inactive account.", model));
+        } catch (IllegalStateException exception) {
+            return businessLoginError(business, exception.getMessage(), model);
+        }
     }
 
     @PostMapping("/logout")
@@ -93,5 +96,12 @@ public class AuthController {
 
     private Business business(String slug) {
         return businesses.findBySlug(slug).orElseThrow();
+    }
+
+    private String businessLoginError(Business business, String error, Model model) {
+        model.addAttribute("business", business);
+        model.addAttribute("loginAction", "/b/" + business.getSlug() + "/login");
+        model.addAttribute("error", error);
+        return "login";
     }
 }

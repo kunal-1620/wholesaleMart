@@ -15,30 +15,40 @@ import java.util.Optional;
 public class AuthService {
     private final UserAccountRepository users;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final LoginAttemptService loginAttempts;
 
-    public AuthService(UserAccountRepository users, BCryptPasswordEncoder passwordEncoder) {
+    public AuthService(UserAccountRepository users, BCryptPasswordEncoder passwordEncoder, LoginAttemptService loginAttempts) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
+        this.loginAttempts = loginAttempts;
     }
 
     public Optional<CurrentUser> login(String phone, String pin, HttpSession session) {
         String normalizedPhone = normalizePhone(phone);
-        return users.findByPhone(normalizedPhone).stream()
+        String attemptKey = "platform:" + normalizedPhone;
+        loginAttempts.ensureAllowed(attemptKey);
+        Optional<CurrentUser> result = users.findByPhone(normalizedPhone).stream()
                 .filter(UserAccount::isActive)
-                .filter(user -> passwordEncoder.matches(pin, user.getPinHash()))
+                .filter(user -> matchesPin(pin, user.getPinHash()))
                 .filter(user -> user.getRole() == Role.PLATFORM_ADMIN)
                 .findFirst()
                 .map(user -> setCurrentUser(user, session));
+        recordAttempt(attemptKey, result);
+        return result;
     }
 
     public Optional<CurrentUser> login(Business business, String phone, String pin, HttpSession session) {
         String normalizedPhone = normalizePhone(phone);
-        return users.findByBusinessAndPhone(business, normalizedPhone).stream()
+        String attemptKey = "business:" + business.getId() + ":" + normalizedPhone;
+        loginAttempts.ensureAllowed(attemptKey);
+        Optional<CurrentUser> result = users.findByBusinessAndPhone(business, normalizedPhone).stream()
                 .filter(UserAccount::isActive)
-                .filter(user -> passwordEncoder.matches(pin, user.getPinHash()))
+                .filter(user -> matchesPin(pin, user.getPinHash()))
                 .filter(user -> user.getRole() != Role.PLATFORM_ADMIN)
                 .findFirst()
                 .map(user -> setCurrentUser(user, session));
+        recordAttempt(attemptKey, result);
+        return result;
     }
 
     private CurrentUser setCurrentUser(UserAccount user, HttpSession session) {
@@ -60,5 +70,17 @@ public class AuthService {
 
     public String normalizePhone(String phone) {
         return phone == null ? "" : phone.replaceAll("[^0-9+]", "");
+    }
+
+    private boolean matchesPin(String pin, String pinHash) {
+        return pin != null && pinHash != null && passwordEncoder.matches(pin, pinHash);
+    }
+
+    private void recordAttempt(String attemptKey, Optional<CurrentUser> result) {
+        if (result.isPresent()) {
+            loginAttempts.recordSuccess(attemptKey);
+        } else {
+            loginAttempts.recordFailure(attemptKey);
+        }
     }
 }

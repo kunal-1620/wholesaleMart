@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +28,7 @@ public class StoredFile {
     @Column(nullable = false)
     private String contentType;
 
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(nullable = false, length = 15_728_640)
     private byte[] data;
 

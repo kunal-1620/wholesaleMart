@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -19,7 +19,7 @@
         <h1 th:text="${product.name}"></h1>
         <p th:text="${product.description}"></p>
         <p><strong th:text="${product.price}"></strong> per item. Set total is item price × number of sizes in the selected set.</p>
-        <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}">
+        <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div>
                     <label>Colour to add</label>

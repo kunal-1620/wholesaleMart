@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -52,7 +52,7 @@
                 <td>
                     <div class="actions" style="margin-top:0">
                         <a th:href="@{/b/{slug}/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a>
-                        <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}">
+                        <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <button class="danger">Cancel</button>
                         </form>
                     </div>

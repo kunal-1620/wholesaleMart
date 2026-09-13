@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -29,14 +29,14 @@
                 <td th:text="${line.sizeSetName + ' (' + line.sizeLabels + ')'}"></td>
                 <td th:text="${line.priceEach}"></td>
                 <td>
-                    <form class="quantity-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/quantity(slug=${business.slug},index=${iter.index})}">
+                    <form class="quantity-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/quantity(slug=${business.slug},index=${iter.index})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <input name="quantity" type="number" min="1" step="1" th:value="${line.quantity}" aria-label="Quantity">
                         <button class="secondary">Update</button>
                     </form>
                 </td>
                 <td th:text="${line.lineTotal()}"></td>
                 <td>
-                    <form class="inline-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/remove(slug=${business.slug},index=${iter.index})}">
+                    <form class="inline-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/remove(slug=${business.slug},index=${iter.index})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <button class="danger">Delete</button>
                     </form>
                 </td>
@@ -49,8 +49,8 @@
     </div>
     <h2 style="margin-top:18px" th:text="'Total: ' + ${total}"></h2>
     <div class="actions">
-        <form method="post" th:action="@{/b/{slug}/cart/submit(slug=${business.slug})}"><button>Submit order request</button></form>
-        <form method="post" th:action="@{/b/{slug}/cart/clear(slug=${business.slug})}"><button class="secondary">Clear cart</button></form>
+        <form method="post" th:action="@{/b/{slug}/cart/submit(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button>Submit order request</button></form>
+        <form method="post" th:action="@{/b/{slug}/cart/clear(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Clear cart</button></form>
     </div>
     <p class="muted">Inventory is not reduced yet. Stock is reduced only after the owner approves the order, you submit payment proof, and the owner verifies payment.</p>
 </main>

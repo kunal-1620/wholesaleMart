@@ -20,7 +20,7 @@
             <a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a>
             <a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a>
             <a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a>
-            <form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form>
+            <form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form>
         </nav>
     </header>
     <main class="container">

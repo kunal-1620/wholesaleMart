@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
-    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
 <main class="container">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
@@ -20,7 +20,7 @@
             <strong>Setup required before activation.</strong>
             <span th:text="${activationIssue}"></span>
         </div>
-        <form method="post" th:action="@{/b/{slug}/admin/products(slug=${business.slug})}">
+        <form method="post" th:action="@{/b/{slug}/admin/products(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <input type="hidden" name="id" th:value="${product.id}">
             <p class="muted" th:if="${product.createdAt != null}" th:text="${'Created: ' + product.createdAt}"></p>
             <div class="grid">
@@ -64,7 +64,7 @@
                 <p class="muted" th:if="${canDeleteProduct}">Only available because this product has no order history. This removes colours, inventory, and stored product images.</p>
                 <p class="muted" th:if="${!canDeleteProduct}">This product exists in one or more orders, so it cannot be permanently deleted. Set status to Inactive / Draft to hide it from customers.</p>
             </div>
-            <form th:if="${canDeleteProduct}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}">
+            <form th:if="${canDeleteProduct}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                 <button class="danger">🗑 Delete product</button>
             </form>
         </div>
@@ -72,7 +72,7 @@
 
     <section class="card" th:if="${product.id != null}" style="margin-top:18px">
         <h2>Add Colour Option</h2>
-        <form method="post" th:action="@{/b/{slug}/admin/products/{id}/colors(slug=${business.slug},id=${product.id})}" enctype="multipart/form-data">
+        <form method="post" th:action="@{/b/{slug}/admin/products/{id}/colors(slug=${business.slug},id=${product.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div><label>Colour name</label><input name="colorName" required></div>
                 <div><label>Photo</label><input name="image" type="file" accept="image/*"></div>
@@ -98,7 +98,7 @@
                 <img class="image" th:if="${color.imagePath}" th:src="${color.imagePath}" alt="">
                 <div class="section-head compact-head">
                     <h3 th:text="${color.name}"></h3>
-                    <form th:if="${deletableColors[color.id]}" method="post" th:action="@{/b/{slug}/admin/colors/{id}/delete(slug=${business.slug},id=${color.id})}">
+                    <form th:if="${deletableColors[color.id]}" method="post" th:action="@{/b/{slug}/admin/colors/{id}/delete(slug=${business.slug},id=${color.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                         <button class="danger icon-button" title="Delete colour" aria-label="Delete colour">🗑</button>
                     </form>
                     <span class="muted tiny-note" th:if="${!deletableColors[color.id]}">Has orders</span>
@@ -107,12 +107,12 @@
                 <p>
                     <span class="badge" th:each="stock : ${stockByColor[color.id]}" th:text="${stock.sizeLabel + ': ' + stock.quantity}"></span>
                 </p>
-                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/image(slug=${business.slug},id=${color.id})}" enctype="multipart/form-data">
+                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/image(slug=${business.slug},id=${color.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                     <label>Replace image</label>
                     <input name="image" type="file" accept="image/*" required>
                     <div class="actions"><button class="secondary">Save image</button></div>
                 </form>
-                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/inventory(slug=${business.slug},id=${color.id})}">
+                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/inventory(slug=${business.slug},id=${color.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                     <label>Update inventory</label>
                     <p class="muted" th:if="${#lists.isEmpty(productSizeLabels)}">Save fixed size sets on the product first. Inventory fields are created from the sizes present in those selected sets.</p>
                     <div class="inventory-grid" th:if="${!#lists.isEmpty(productSizeLabels)}">
@@ -135,7 +135,7 @@
             <p class="muted">We will first check that at least one selected fixed size set has stock for every size in that set.</p>
             <div class="dialog-actions">
                 <a class="button secondary" th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${activatePromptProductId})}">Keep inactive</a>
-                <form method="post" th:action="@{/b/{slug}/admin/products/{id}/activate(slug=${business.slug},id=${activatePromptProductId})}">
+                <form method="post" th:action="@{/b/{slug}/admin/products/{id}/activate(slug=${business.slug},id=${activatePromptProductId})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                     <button>Make active</button>
                 </form>
             </div>

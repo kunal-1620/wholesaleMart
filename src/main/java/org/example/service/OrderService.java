@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -246,6 +247,36 @@ public class OrderService {
         return orders.findByCustomerOrderByCreatedAtDesc(customer);
     }
 
+    public List<CustomerOrder> ordersForBusiness(
+            Business business,
+            OrderStatus status,
+            Long customerId,
+            LocalDate createdFrom,
+            LocalDate createdTo
+    ) {
+        return orders.findForBusiness(
+                business,
+                status,
+                customerId,
+                startOfDay(createdFrom),
+                startOfNextDay(createdTo)
+        );
+    }
+
+    public List<CustomerOrder> ordersForCustomer(
+            UserAccount customer,
+            OrderStatus status,
+            LocalDate createdFrom,
+            LocalDate createdTo
+    ) {
+        return orders.findForCustomer(
+                customer,
+                status,
+                startOfDay(createdFrom),
+                startOfNextDay(createdTo)
+        );
+    }
+
     public List<OrderItem> items(CustomerOrder order) {
         return orderItems.findByOrder(order);
     }
@@ -282,6 +313,14 @@ public class OrderService {
 
     public CustomerOrder order(Long id) {
         return orders.findById(id).orElseThrow();
+    }
+
+    public CustomerOrder orderForBusiness(Business business, Long id) {
+        return requireBusinessOrder(business, id);
+    }
+
+    public CustomerOrder orderForCustomer(Long id, Long customerId) {
+        return requireCustomerOrder(id, customerId);
     }
 
     @Transactional
@@ -329,8 +368,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void approve(Long orderId) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void approve(Business business, Long orderId) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         if (order.getStatus() != OrderStatus.PENDING_APPROVAL) {
             throw new IllegalStateException("Only orders waiting for approval can be approved.");
         }
@@ -347,8 +386,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void reject(Long orderId) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void reject(Business business, Long orderId) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         order.setStatus(OrderStatus.REJECTED);
         orders.save(order);
     }
@@ -367,8 +406,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void submitPaymentProof(Long orderId, String transactionId, MultipartFile proof) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void submitPaymentProof(Long orderId, Long customerId, String transactionId, MultipartFile proof) {
+        CustomerOrder order = requireCustomerOrder(orderId, customerId);
         if (order.getStatus() != OrderStatus.APPROVED_AWAITING_PAYMENT && order.getStatus() != OrderStatus.OUT_OF_STOCK) {
             throw new IllegalStateException("Payment proof can only be submitted after approval.");
         }
@@ -389,8 +428,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void ownerSubmitPaymentProof(Long orderId, String transactionId, MultipartFile proof) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void ownerSubmitPaymentProof(Business business, Long orderId, String transactionId, MultipartFile proof) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         if (order.getStatus() != OrderStatus.APPROVED_AWAITING_PAYMENT
                 && order.getStatus() != OrderStatus.OUT_OF_STOCK
                 && order.getStatus() != OrderStatus.PAYMENT_SUBMITTED) {
@@ -409,8 +448,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void verifyPaymentAndConfirm(Long orderId) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void verifyPaymentAndConfirm(Business business, Long orderId) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         if (order.getStatus() != OrderStatus.PAYMENT_SUBMITTED) {
             throw new IllegalStateException("Only payment-submitted orders can be confirmed.");
         }
@@ -448,8 +487,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void updateItemQuantity(Long orderId, Long itemId, int quantity) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void updateItemQuantity(Business business, Long orderId, Long itemId, int quantity) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         ensureEditableByOwner(order);
         OrderItem item = orderItems.findById(itemId).orElseThrow();
         if (!item.getOrder().getId().equals(orderId)) {
@@ -463,8 +502,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void removeItem(Long orderId, Long itemId) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void removeItem(Business business, Long orderId, Long itemId) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         ensureEditableByOwner(order);
         OrderItem item = orderItems.findById(itemId).orElseThrow();
         if (!item.getOrder().getId().equals(orderId)) {
@@ -475,12 +514,15 @@ public class OrderService {
     }
 
     @Transactional
-    public void addItem(Long orderId, Long productColorId, Long sizeSetId, int quantity) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void addItem(Business business, Long orderId, Long productColorId, Long sizeSetId, int quantity) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         ensureEditableByOwner(order);
         ProductColor color = colors.findById(productColorId).orElseThrow();
         SizeSet sizeSet = sizeSets.findById(sizeSetId).orElseThrow();
         Product product = color.getProduct();
+        if (!product.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Product does not belong to this business.");
+        }
         if (!sizeSet.getProduct().getId().equals(product.getId())) {
             throw new IllegalArgumentException("Size set does not belong to product.");
         }
@@ -500,8 +542,8 @@ public class OrderService {
     }
 
     @Transactional
-    public void complete(Long orderId) {
-        CustomerOrder order = orders.findById(orderId).orElseThrow();
+    public void complete(Business business, Long orderId) {
+        CustomerOrder order = requireBusinessOrder(business, orderId);
         if (order.getStatus() != OrderStatus.PAID_CONFIRMED) {
             throw new IllegalStateException("Only paid and inventory-confirmed orders can be marked complete.");
         }
@@ -515,6 +557,30 @@ public class OrderService {
         }
     }
 
+    private LocalDateTime startOfDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    private LocalDateTime startOfNextDay(LocalDate date) {
+        return date == null ? null : date.plusDays(1).atStartOfDay();
+    }
+
+    private CustomerOrder requireBusinessOrder(Business business, Long orderId) {
+        CustomerOrder order = orders.findById(orderId).orElseThrow();
+        if (order.getBusiness() == null || !order.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Order does not belong to this business.");
+        }
+        return order;
+    }
+
+    private CustomerOrder requireCustomerOrder(Long orderId, Long customerId) {
+        CustomerOrder order = orders.findById(orderId).orElseThrow();
+        if (order.getCustomer() == null || !order.getCustomer().getId().equals(customerId)) {
+            throw new IllegalArgumentException("Order does not belong to this customer.");
+        }
+        return order;
+    }
+
     private void recalculate(CustomerOrder order) {
         BigDecimal total = orderItems.findByOrder(order).stream()
                 .map(item -> item.getPriceEach().multiply(BigDecimal.valueOf(item.getQuantity())))
@@ -523,6 +589,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.PAYMENT_SUBMITTED || order.getStatus() == OrderStatus.OUT_OF_STOCK) {
             order.setStatus(OrderStatus.APPROVED_AWAITING_PAYMENT);
             order.setTransactionId(null);
+            fileStorage.deleteByPath(order.getPaymentProofPath());
             order.setPaymentProofPath(null);
             order.setPaymentSubmittedAt(null);
         }

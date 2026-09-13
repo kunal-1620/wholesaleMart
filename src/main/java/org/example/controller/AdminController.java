@@ -69,7 +69,7 @@ public class AdminController {
 
     @GetMapping("/customers/{id}/activity")
     public String customerActivity(@PathVariable Long id, HttpSession session, Model model) {
-        model.addAttribute("activity", analyticsService.customerActivity(orderService.user(id)));
+        model.addAttribute("activity", analyticsService.customerActivity(adminService.customer(business(session), id)));
         return withCommon(session, model, "admin/customer-activity");
     }
 
@@ -139,7 +139,7 @@ public class AdminController {
 
     @GetMapping("/products/{id}/edit")
     public String editProduct(@PathVariable Long id, HttpSession session, Model model) {
-        Product product = adminService.product(id);
+        Product product = adminService.product(business(session), id);
         List<ProductColor> colors = adminService.colors(product);
         List<String> productSizeLabels = adminService.productSizeLabels(product);
         model.addAttribute("product", product);
@@ -260,7 +260,8 @@ public class AdminController {
             @RequestParam(required = false) List<String> quantities,
             RedirectAttributes redirectAttributes
     ) {
-        Product product = adminService.product(id);
+        Business business = business(session);
+        Product product = adminService.product(business, id);
         boolean shouldPromptActivation = !product.isActive();
         adminService.addColor(product, colorName, image, sizeLabels, quantities);
         redirectAttributes.addFlashAttribute("message", "Colour and inventory added.");
@@ -309,7 +310,7 @@ public class AdminController {
             @RequestParam(required = false) List<String> quantities,
             RedirectAttributes redirectAttributes
     ) {
-        ProductColor color = adminService.color(id);
+        ProductColor color = adminService.color(business(session), id);
         adminService.updateInventory(color, sizeLabels, quantities);
         redirectAttributes.addFlashAttribute("message", "Inventory updated.");
         if (!color.getProduct().isActive()) {
@@ -325,9 +326,10 @@ public class AdminController {
             @RequestParam MultipartFile image,
             RedirectAttributes redirectAttributes
     ) {
-        Long productId = adminService.color(id).getProduct().getId();
+        Business business = business(session);
+        Long productId = adminService.color(business, id).getProduct().getId();
         try {
-            productId = adminService.replaceColorImage(business(session), id, image);
+            productId = adminService.replaceColorImage(business, id, image);
             redirectAttributes.addFlashAttribute("message", "Colour image replaced and old image storage cleaned up.");
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
@@ -341,9 +343,10 @@ public class AdminController {
             @PathVariable Long id,
             RedirectAttributes redirectAttributes
     ) {
-        Long productId = adminService.color(id).getProduct().getId();
+        Business business = business(session);
+        Long productId = adminService.color(business, id).getProduct().getId();
         try {
-            productId = adminService.deleteColor(business(session), id);
+            productId = adminService.deleteColor(business, id);
             redirectAttributes.addFlashAttribute("message", "Colour deleted. Its image and inventory were removed from storage.");
         } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
@@ -361,24 +364,8 @@ public class AdminController {
             Model model
     ) {
         Business business = business(session);
-        List<CustomerOrder> orders = orderService.ordersForBusiness(business);
         OrderStatus selectedStatus = parseOrderStatus(status);
-        if (selectedStatus != null) {
-            orders = orders.stream().filter(order -> order.getStatus() == selectedStatus).toList();
-        }
-        if (customerId != null) {
-            orders = orders.stream().filter(order -> order.getCustomer().getId().equals(customerId)).toList();
-        }
-        if (createdFrom != null) {
-            orders = orders.stream()
-                    .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isBefore(createdFrom))
-                    .toList();
-        }
-        if (createdTo != null) {
-            orders = orders.stream()
-                    .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isAfter(createdTo))
-                    .toList();
-        }
+        List<CustomerOrder> orders = orderService.ordersForBusiness(business, selectedStatus, customerId, createdFrom, createdTo);
         model.addAttribute("orders", orders);
         model.addAttribute("customers", adminService.customers(business));
         model.addAttribute("selectedStatus", selectedStatus);
@@ -391,8 +378,13 @@ public class AdminController {
 
     @GetMapping("/orders/{id}")
     public String orderDetail(@PathVariable Long id, HttpSession session, Model model) {
-        CustomerOrder order = orderService.order(id);
         Business business = business(session);
+        CustomerOrder order;
+        try {
+            order = orderService.orderForBusiness(business, id);
+        } catch (IllegalArgumentException exception) {
+            return adminRedirect(session, "/orders");
+        }
         List<OrderItem> items = orderService.items(order);
         model.addAttribute("order", order);
         model.addAttribute("items", items);
@@ -405,8 +397,13 @@ public class AdminController {
     }
 
     @GetMapping("/orders/{id}/invoice.pdf")
-    public ResponseEntity<byte[]> invoice(@PathVariable Long id) {
-        CustomerOrder order = orderService.order(id);
+    public ResponseEntity<byte[]> invoice(@PathVariable Long id, HttpSession session) {
+        CustomerOrder order;
+        try {
+            order = orderService.orderForBusiness(business(session), id);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
         byte[] pdf = invoicePdfService.invoice(order, orderService.items(order));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=order-" + order.getId() + "-invoice.pdf")
@@ -429,9 +426,9 @@ public class AdminController {
     @PostMapping("/orders/{id}/approve")
     public String approve(HttpSession session, @PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            orderService.approve(id);
+            orderService.approve(business(session), id);
             redirectAttributes.addFlashAttribute("message", "Order approved. Customer can submit payment proof now.");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);
@@ -446,9 +443,9 @@ public class AdminController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            orderService.updateItemQuantity(id, itemId, quantity);
+            orderService.updateItemQuantity(business(session), id, itemId, quantity);
             redirectAttributes.addFlashAttribute("message", "Order item updated.");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);
@@ -457,9 +454,9 @@ public class AdminController {
     @PostMapping("/orders/{id}/items/{itemId}/remove")
     public String removeItem(HttpSession session, @PathVariable Long id, @PathVariable Long itemId, RedirectAttributes redirectAttributes) {
         try {
-            orderService.removeItem(id, itemId);
+            orderService.removeItem(business(session), id, itemId);
             redirectAttributes.addFlashAttribute("message", "Order item removed.");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);
@@ -475,7 +472,7 @@ public class AdminController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            orderService.addItem(id, productColorId, sizeSetId, quantity);
+            orderService.addItem(business(session), id, productColorId, sizeSetId, quantity);
             redirectAttributes.addFlashAttribute("message", "Replacement item added.");
         } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
@@ -492,9 +489,9 @@ public class AdminController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            orderService.ownerSubmitPaymentProof(id, transactionId, proof);
+            orderService.ownerSubmitPaymentProof(business(session), id, transactionId, proof);
             redirectAttributes.addFlashAttribute("message", "Payment details saved. You can now verify payment and reduce inventory.");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);
@@ -502,22 +499,27 @@ public class AdminController {
 
     @PostMapping("/orders/{id}/reject")
     public String reject(HttpSession session, @PathVariable Long id, RedirectAttributes redirectAttributes) {
-        orderService.reject(id);
-        redirectAttributes.addFlashAttribute("message", "Order rejected.");
+        try {
+            orderService.reject(business(session), id);
+            redirectAttributes.addFlashAttribute("message", "Order rejected.");
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        }
         return adminRedirect(session, "/orders/" + id);
     }
 
     @PostMapping("/orders/{id}/verify-payment")
     public String verifyPayment(HttpSession session, @PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            orderService.verifyPaymentAndConfirm(id);
-            CustomerOrder order = orderService.order(id);
+            Business business = business(session);
+            orderService.verifyPaymentAndConfirm(business, id);
+            CustomerOrder order = orderService.orderForBusiness(business, id);
             if (order.getStatus() == OrderStatus.OUT_OF_STOCK) {
                 redirectAttributes.addFlashAttribute("message", "Payment was reviewed, but one or more items are out of stock.");
             } else {
                 redirectAttributes.addFlashAttribute("message", "Payment verified and inventory reduced.");
             }
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);
@@ -526,9 +528,9 @@ public class AdminController {
     @PostMapping("/orders/{id}/complete")
     public String complete(HttpSession session, @PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            orderService.complete(id);
+            orderService.complete(business(session), id);
             redirectAttributes.addFlashAttribute("message", "Order marked complete.");
-        } catch (IllegalStateException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/orders/" + id);

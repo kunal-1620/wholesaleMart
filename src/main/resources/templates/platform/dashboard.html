@@ -11,7 +11,7 @@
     <div class="brand"><img class="brand-logo" src="/placeholder-logo.svg" alt=""><span>Platform Admin</span></div>
     <nav class="nav">
         <a href="/platform">Businesses</a>
-        <form class="inline-form" method="post" action="/logout"><button class="secondary">Logout</button></form>
+        <form class="inline-form" method="post" action="/logout"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form>
     </nav>
 </header>
 <main class="container">
@@ -35,7 +35,7 @@
                 <td>
                     <div class="actions">
                         <a class="button secondary" th:href="@{/platform/businesses/{id}(id=${business.id})}">Edit</a>
-                        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}">
+                        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <button>Manage</button>
                         </form>
                     </div>

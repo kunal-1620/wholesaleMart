@@ -11,7 +11,7 @@
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.id == null ? 'New Business' : business.name}">Business Setup</span></div>
     <nav class="nav">
         <a href="/platform">Businesses</a>
-        <form class="inline-form" method="post" action="/logout"><button class="secondary">Logout</button></form>
+        <form class="inline-form" method="post" action="/logout"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form>
     </nav>
 </header>
 <main class="container">
@@ -19,7 +19,7 @@
     <div class="notice error" th:if="${error}" th:text="${error}"></div>
     <section class="card">
         <h1 th:text="${business.id == null ? 'Add Business' : 'Edit Business'}">Business</h1>
-        <form method="post" action="/platform/businesses" enctype="multipart/form-data">
+        <form method="post" action="/platform/businesses" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <input type="hidden" name="id" th:value="${business.id}">
             <div class="grid">
                 <div><label>Business name</label><input name="name" th:value="${business.name}" required></div>
@@ -44,7 +44,7 @@
 
     <section class="card" th:if="${business.id != null}" style="margin-top:18px">
         <h2>Add Owner / Staff</h2>
-        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}">
+        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="grid">
                 <div><label>Name</label><input name="name" required></div>
                 <div><label>Phone</label><input name="phone" required></div>
@@ -68,7 +68,7 @@
                     <td th:text="${owner.role}"></td>
                     <td th:text="${owner.active ? 'Active' : 'Inactive'}"></td>
                     <td th:if="${owner.role.name() != 'PLATFORM_ADMIN'}">
-                        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}">
+                        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <input type="hidden" name="ownerId" th:value="${owner.id}">
                             <div class="grid">
                                 <div><label>Name</label><input name="name" th:value="${owner.name}" required></div>
@@ -85,7 +85,7 @@
                 </tbody>
             </table>
         </div>
-        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}">
+        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <div class="actions"><button>Manage this business</button></div>
         </form>
     </section>
