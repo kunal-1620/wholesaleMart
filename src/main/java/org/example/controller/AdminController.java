@@ -110,7 +110,6 @@ public class AdminController {
         model.addAttribute("products", products);
         model.addAttribute("activationIssues", adminService.activationIssues(products));
         model.addAttribute("inventorySummaryByProduct", adminService.inventorySummaryByProduct(products));
-        model.addAttribute("deletableProducts", adminService.deletableProducts(products));
         model.addAttribute("categories", adminService.categories(business));
         model.addAttribute("colorOptions", adminService.productColorOptions(business));
         model.addAttribute("setOptions", adminService.productSetOptions(business));
@@ -300,7 +299,7 @@ public class AdminController {
             adminService.deleteProduct(business(session), id);
             redirectAttributes.addFlashAttribute("message", "Product deleted. Its colour images and inventory were removed from storage.");
             return adminRedirect(session, "/products");
-        } catch (IllegalArgumentException | IllegalStateException exception) {
+        } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return adminRedirect(session, "/products/" + id + "/edit");
         }

@@ -106,10 +106,6 @@
                 <td>
                     <div class="row-actions">
                         <a th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${product.id})}">Edit</a>
-                        <form class="inline-form" th:if="${deletableProducts[product.id]}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
-                            <button class="danger icon-button" title="Delete product" aria-label="Delete product">🗑</button>
-                        </form>
-                        <span class="muted tiny-note" th:if="${!deletableProducts[product.id]}">Has orders</span>
                     </div>
                 </td>
             </tr>

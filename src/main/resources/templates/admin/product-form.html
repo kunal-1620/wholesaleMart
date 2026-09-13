@@ -15,7 +15,10 @@
     <div class="notice" th:if="${message}" th:text="${message}"></div>
     <div class="notice error" th:if="${error}" th:text="${error}"></div>
     <section class="card">
-        <h1 th:text="${product.id == null ? 'Add Product' : 'Edit Product'}">Product</h1>
+        <div class="section-head compact-head">
+            <h1 th:text="${product.id == null ? 'Add Product' : 'Edit Product'}">Product</h1>
+            <button th:if="${product.id != null}" class="danger icon-button" type="button" title="Delete product" aria-label="Delete product" th:attr="data-dialog-id=${canDeleteProduct ? 'deleteProductConfirmDialog' : 'deleteProductBlockedDialog'}">🗑</button>
+        </div>
         <div class="notice" th:if="${activationIssue != null}">
             <strong>Setup required before activation.</strong>
             <span th:text="${activationIssue}"></span>
@@ -58,16 +61,6 @@
             <p class="muted">Each size listed in a set is exactly 1 piece. Quantity 5 of S,M,L deducts S -5, M -5, L -5.</p>
             <div class="actions"><button>Save product</button></div>
         </form>
-        <div class="danger-zone" th:if="${product.id != null}">
-            <div>
-                <h3>Delete product</h3>
-                <p class="muted" th:if="${canDeleteProduct}">Only available because this product has no order history. This removes colours, inventory, and stored product images.</p>
-                <p class="muted" th:if="${!canDeleteProduct}">This product exists in one or more orders, so it cannot be permanently deleted. Set status to Inactive / Draft to hide it from customers.</p>
-            </div>
-            <form th:if="${canDeleteProduct}" method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
-                <button class="danger">🗑 Delete product</button>
-            </form>
-        </div>
     </section>
 
     <section class="card" th:if="${product.id != null}" style="margin-top:18px">
@@ -141,6 +134,54 @@
             </div>
         </section>
     </div>
+    <dialog class="cart-dialog product-delete-dialog" id="deleteProductBlockedDialog" th:if="${product.id != null && !canDeleteProduct}">
+        <section class="cart-dialog-card">
+            <button class="dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+            <div class="dialog-icon">!</div>
+            <h2>Product cannot be deleted</h2>
+            <p>We can't delete this product because it has been used in past orders.</p>
+            <p class="muted">Set the product status to Inactive / Draft if you want to hide it from customers.</p>
+            <div class="dialog-actions">
+                <button class="secondary" type="button" data-close-dialog>Close</button>
+            </div>
+        </section>
+    </dialog>
+    <dialog class="cart-dialog product-delete-dialog" id="deleteProductConfirmDialog" th:if="${product.id != null && canDeleteProduct}">
+        <section class="cart-dialog-card">
+            <button class="dialog-close" type="button" data-close-dialog aria-label="Close">×</button>
+            <div class="dialog-icon">🗑</div>
+            <h2>Delete this product?</h2>
+            <p>Are you sure you want to delete this product?</p>
+            <div class="dialog-actions">
+                <button class="secondary" type="button" data-close-dialog>Cancel</button>
+                <form method="post" th:action="@{/b/{slug}/admin/products/{id}/delete(slug=${business.slug},id=${product.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+                    <button class="danger">Delete</button>
+                </form>
+            </div>
+        </section>
+    </dialog>
 </main>
+<script>
+    document.querySelectorAll("[data-dialog-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const dialog = document.getElementById(button.dataset.dialogId);
+            if (dialog) {
+                dialog.showModal();
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+        button.addEventListener("click", () => button.closest("dialog")?.close());
+    });
+
+    document.querySelectorAll(".product-delete-dialog").forEach((dialog) => {
+        dialog.addEventListener("click", (event) => {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    });
+</script>
 </body>
 </html>
