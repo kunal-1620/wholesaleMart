@@ -68,28 +68,32 @@ There is no public sign-up. Admins create customers, set/change PINs, assign tie
 
 ## Hosting configuration
 
-Production is configured through environment variables. The repo includes a Dockerfile and `render.yaml` for a Render Blueprint deployment with one web service and one managed PostgreSQL database.
+Production is configured through environment variables. The repo includes a Dockerfile and `render.yaml` for a Render Blueprint deployment with one web service. PostgreSQL is expected to run on Neon.
 
-### Render deployment
+### Render + Neon deployment
 
 You do not need Docker installed locally. The Dockerfile is used by Render's cloud build environment when it deploys from GitHub.
 
-1. Push this repo to GitHub.
-2. In Render, create a new Blueprint from `kunal-1620/wholesaleMart`.
-3. Render will read `render.yaml`, build the Docker image, and create the `wholesalemart-db` PostgreSQL database.
-4. When Render prompts for secret values, set:
+1. Create a free Neon project and database.
+2. In Neon, open **Connect** and copy the connection details.
+3. In Render, create a new Blueprint from `kunal-1620/wholesaleMart`.
+4. Render will read `render.yaml` and build the Docker image.
+5. When Render prompts for secret values, set:
 
 ```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://<neon-host>/<database>?sslmode=require
+SPRING_DATASOURCE_USERNAME=<neon-user>
+SPRING_DATASOURCE_PASSWORD=<neon-password>
 APP_PLATFORM_ADMIN_PHONE=...
 APP_PLATFORM_ADMIN_PIN=...
 ```
 
-5. After deploy, open the Render app URL and log in at `/login` with the platform admin phone and PIN.
+6. After deploy, open the Render app URL and log in at `/login` with the platform admin phone and PIN.
 
-The Render blueprint injects database connection values through `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. If you host somewhere else, set those variables or override the standard Spring datasource properties with your provider's equivalent values.
+Use a JDBC URL in Render, not the raw Neon `postgresql://...` URL. If Neon shows only the raw URL, convert it to the JDBC form above and keep username/password in the separate Render env vars.
 
 Demo data is disabled by default in production. `APP_PLATFORM_ADMIN_PHONE` and `APP_PLATFORM_ADMIN_PIN` are required for a fresh hosted database so the first platform admin can log in.
 
-Uploaded business logos, product images, and payment proof screenshots are stored in the application database and served through authenticated file routes. This avoids local filesystem image storage for the initial hosted version.
+Uploaded business logos, product images, and payment proof screenshots are stored in the application database and served through authenticated file routes. This avoids local filesystem image storage for the initial hosted version, but it also means Neon free-tier storage can fill up quickly if many product images are uploaded.
 
 Longer term, if upload volume grows, move file storage from database-backed files to S3/R2/Cloudinary while keeping the same stored URL pattern in the business/product/order records.

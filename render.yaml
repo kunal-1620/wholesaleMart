@@ -15,26 +15,16 @@ services:
         value: update
       - key: SPRING_DATASOURCE_DRIVER
         value: org.postgresql.Driver
-      - key: DB_HOST
-        fromDatabase:
-          name: wholesalemart-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: wholesalemart-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: wholesalemart-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: wholesalemart-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: wholesalemart-db
-          property: password
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "5"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "0"
       - key: APP_PLATFORM_ADMIN_PHONE
         sync: false
       - key: APP_PLATFORM_ADMIN_PIN
@@ -47,10 +37,3 @@ services:
         value: platform
       - key: APP_BOOTSTRAP_PAYMENT_INSTRUCTIONS
         value: Manual payment. Upload transaction proof after approval.
-
-databases:
-  - name: wholesalemart-db
-    plan: free
-    region: singapore
-    databaseName: wholesalemart
-    user: wholesalemart
