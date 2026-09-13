@@ -37,6 +37,9 @@ public class StoredFile {
     @Column(length = 1000)
     private String publicUrl;
 
+    @Column(nullable = false)
+    private long sizeBytes;
+
     @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(length = 15_728_640)
     private byte[] data;
@@ -112,6 +115,14 @@ public class StoredFile {
 
     public void setPublicUrl(String publicUrl) {
         this.publicUrl = publicUrl;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public void setSizeBytes(long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 
     public byte[] getData() {

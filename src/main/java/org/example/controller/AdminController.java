@@ -263,10 +263,14 @@ public class AdminController {
         Business business = business(session);
         Product product = adminService.product(business, id);
         boolean shouldPromptActivation = !product.isActive();
-        adminService.addColor(product, colorName, image, sizeLabels, quantities);
-        redirectAttributes.addFlashAttribute("message", "Colour and inventory added.");
-        if (shouldPromptActivation) {
-            redirectAttributes.addFlashAttribute("activatePromptProductId", id);
+        try {
+            adminService.addColor(product, colorName, image, sizeLabels, quantities);
+            redirectAttributes.addFlashAttribute("message", "Colour and inventory added.");
+            if (shouldPromptActivation) {
+                redirectAttributes.addFlashAttribute("activatePromptProductId", id);
+            }
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/products/" + id + "/edit");
     }
@@ -331,7 +335,7 @@ public class AdminController {
         try {
             productId = adminService.replaceColorImage(business, id, image);
             redirectAttributes.addFlashAttribute("message", "Colour image replaced and old image storage cleaned up.");
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
         }
         return adminRedirect(session, "/products/" + productId + "/edit");

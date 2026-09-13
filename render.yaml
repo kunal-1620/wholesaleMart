@@ -39,6 +39,10 @@ services:
         value: Manual payment. Upload transaction proof after approval.
       - key: APP_STORAGE_BACKEND
         value: database
+      - key: APP_STORAGE_LIMIT_MB
+        value: 8500
+      - key: APP_UPLOADS_ENABLED
+        value: true
       - key: R2_ENDPOINT
         sync: false
       - key: R2_ACCESS_KEY_ID

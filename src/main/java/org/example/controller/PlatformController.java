@@ -60,7 +60,7 @@ public class PlatformController {
             Business business = platformService.saveBusiness(id, name, slug, contactPhone, paymentInstructions, logo);
             redirectAttributes.addFlashAttribute("message", "Business saved.");
             return "redirect:/platform/businesses/" + business.getId();
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return id == null ? "redirect:/platform/businesses/new" : "redirect:/platform/businesses/" + id;
         }

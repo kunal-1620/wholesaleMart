@@ -48,7 +48,7 @@
                 <td th:text="${order.id}"></td>
                 <td><span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></td>
                 <td th:text="${order.totalAmount}"></td>
-                <td th:text="${order.createdAt}"></td>
+                <td th:text="${order.createdAt != null ? order.createdAt.toLocalDate() : '-'}"></td>
                 <td>
                     <div class="actions" style="margin-top:0">
                         <a th:href="@{/b/{slug}/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a>

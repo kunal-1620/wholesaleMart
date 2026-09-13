@@ -33,6 +33,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Optional;
@@ -46,12 +48,15 @@ public class FileStorageService {
     private static final String PAYMENTS_FOLDER = "payments";
     private static final int MAX_IMAGE_DIMENSION = 1200;
     private static final float JPEG_QUALITY = 0.78f;
+    private static final long BYTES_PER_MB = 1024L * 1024L;
 
     private final StoredFileRepository storedFiles;
     private final String storageBackend;
     private final String r2PublicBucket;
     private final String r2PrivateBucket;
     private final String r2PublicBaseUrl;
+    private final boolean uploadsEnabled;
+    private final long storageLimitBytes;
     private final S3Client r2Client;
 
     public FileStorageService(
@@ -63,13 +68,17 @@ public class FileStorageService {
             @Value("${app.storage.r2.secret-access-key:}") String r2SecretAccessKey,
             @Value("${app.storage.r2.public-bucket:}") String r2PublicBucket,
             @Value("${app.storage.r2.private-bucket:}") String r2PrivateBucket,
-            @Value("${app.storage.r2.public-base-url:}") String r2PublicBaseUrl
+            @Value("${app.storage.r2.public-base-url:}") String r2PublicBaseUrl,
+            @Value("${app.uploads.enabled:true}") boolean uploadsEnabled,
+            @Value("${app.storage.limit-mb:8500}") long storageLimitMb
     ) {
         this.storedFiles = storedFiles;
         this.storageBackend = normalized(storageBackend);
         this.r2PublicBucket = blankToNull(r2PublicBucket);
         this.r2PrivateBucket = blankToNull(r2PrivateBucket);
         this.r2PublicBaseUrl = trimTrailingSlash(blankToNull(r2PublicBaseUrl));
+        this.uploadsEnabled = uploadsEnabled;
+        this.storageLimitBytes = Math.max(0, storageLimitMb) * BYTES_PER_MB;
         this.r2Client = r2Enabled()
                 ? buildR2Client(r2Endpoint, r2Region, r2AccessKeyId, r2SecretAccessKey)
                 : null;
@@ -88,31 +97,29 @@ public class FileStorageService {
         }
         try {
             StoredUpload upload = prepareUpload(file);
-            if (r2Enabled()) {
-                return storeInR2(upload, folder, businessId);
-            }
-            StoredFile storedFile = new StoredFile();
-            storedFile.setId(UUID.randomUUID().toString());
-            storedFile.setBusinessId(businessId);
-            storedFile.setFolder(folder);
-            storedFile.setFilename(folder + "-" + UUID.randomUUID() + upload.extension());
-            storedFile.setContentType(upload.contentType());
-            storedFile.setStorageProvider(DATABASE_PROVIDER);
-            storedFile.setData(upload.data());
-            storedFiles.save(storedFile);
-            return "/files/" + storedFile.getId();
+            assertUploadAllowed(upload.data().length, 0);
+            return storePrepared(upload, folder, businessId);
         } catch (IOException exception) {
             throw new IllegalStateException("Could not store uploaded file", exception);
         }
     }
 
     public String replace(MultipartFile file, String existingPath, String folder, Long businessId) {
-        String newPath = store(file, folder, businessId);
-        if (newPath != null) {
+        if (file == null || file.isEmpty()) {
+            return existingPath;
+        }
+        if (businessId == null) {
+            throw new IllegalArgumentException("Business ID is required before storing files.");
+        }
+        try {
+            StoredUpload upload = prepareUpload(file);
+            assertUploadAllowed(upload.data().length, existingSizeBytes(existingPath));
+            String newPath = storePrepared(upload, folder, businessId);
             deleteByPath(existingPath);
             return newPath;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not store uploaded file", exception);
         }
-        return existingPath;
     }
 
     public void deleteByPath(String path) {
@@ -156,6 +163,27 @@ public class FileStorageService {
         return file != null && PAYMENTS_FOLDER.equals(file.getFolder());
     }
 
+    public long totalStoredBytes() {
+        return storedFiles.totalSizeBytes();
+    }
+
+    private String storePrepared(StoredUpload upload, String folder, Long businessId) {
+        if (r2Enabled()) {
+            return storeInR2(upload, folder, businessId);
+        }
+        StoredFile storedFile = new StoredFile();
+        storedFile.setId(UUID.randomUUID().toString());
+        storedFile.setBusinessId(businessId);
+        storedFile.setFolder(folder);
+        storedFile.setFilename(folder + "-" + UUID.randomUUID() + upload.extension());
+        storedFile.setContentType(upload.contentType());
+        storedFile.setStorageProvider(DATABASE_PROVIDER);
+        storedFile.setSizeBytes(upload.data().length);
+        storedFile.setData(upload.data());
+        storedFiles.save(storedFile);
+        return "/files/" + storedFile.getId();
+    }
+
     private String storeInR2(StoredUpload upload, String folder, Long businessId) {
         boolean privateFile = PAYMENTS_FOLDER.equals(folder);
         String bucket = privateFile ? r2PrivateBucket : r2PublicBucket;
@@ -178,6 +206,7 @@ public class FileStorageService {
         storedFile.setFilename(filename);
         storedFile.setContentType(upload.contentType());
         storedFile.setStorageProvider(R2_PROVIDER);
+        storedFile.setSizeBytes(upload.data().length);
         storedFile.setObjectKey(key);
         if (!privateFile && r2PublicBaseUrl != null) {
             storedFile.setPublicUrl(r2PublicBaseUrl + "/" + key);
@@ -226,6 +255,42 @@ public class FileStorageService {
 
     private String objectKey(Long businessId, String folder, String id, String extension) {
         return "businesses/" + businessId + "/" + safeKeySegment(folder) + "/" + id + extension;
+    }
+
+    private void assertUploadAllowed(long uploadBytes, long replaceableBytes) {
+        if (!uploadsEnabled) {
+            throw new IllegalStateException("Uploads are currently disabled. Set APP_UPLOADS_ENABLED=true to allow new uploads.");
+        }
+        if (storageLimitBytes <= 0) {
+            throw new IllegalStateException("Uploads are blocked because APP_STORAGE_LIMIT_MB is 0.");
+        }
+        long currentBytes = totalStoredBytes();
+        long effectiveBytes = Math.max(0, currentBytes - Math.max(0, replaceableBytes)) + uploadBytes;
+        if (effectiveBytes > storageLimitBytes) {
+            throw new IllegalStateException("Storage limit reached. Current usage is "
+                    + humanBytes(currentBytes)
+                    + " of "
+                    + humanBytes(storageLimitBytes)
+                    + "; this upload needs "
+                    + humanBytes(uploadBytes)
+                    + ". Delete old images or increase APP_STORAGE_LIMIT_MB.");
+        }
+    }
+
+    private long existingSizeBytes(String path) {
+        String id = storedFileId(path);
+        if (id == null) {
+            return 0;
+        }
+        return storedFiles.findById(id)
+                .map(StoredFile::getSizeBytes)
+                .orElse(0L);
+    }
+
+    private String humanBytes(long bytes) {
+        double mb = (double) bytes / BYTES_PER_MB;
+        DecimalFormat format = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.US));
+        return format.format(mb) + " MB";
     }
 
     private StoredUpload prepareUpload(MultipartFile file) throws IOException {

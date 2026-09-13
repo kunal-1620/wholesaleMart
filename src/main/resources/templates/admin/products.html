@@ -102,7 +102,7 @@
                     <span class="badge" th:if="${activationIssues[product.id] == null}">Ready</span>
                     <span class="muted" th:if="${activationIssues[product.id] != null}" th:text="${activationIssues[product.id]}"></span>
                 </td>
-                <td th:text="${product.createdAt}"></td>
+                <td th:text="${product.createdAt != null ? product.createdAt.toLocalDate() : '-'}"></td>
                 <td>
                     <div class="row-actions">
                         <a th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${product.id})}">Edit</a>

@@ -215,6 +215,9 @@ R2 is accessed using the AWS SDK for Java v2 through R2’s S3-compatible endpoi
 
 Important implementation details:
 
+- Uploads are blocked if `APP_UPLOADS_ENABLED=false`.
+- Uploads are blocked before storage if total tracked file usage would cross `APP_STORAGE_LIMIT_MB`.
+- Recommended free-tier safety limit: `APP_STORAGE_LIMIT_MB=8500`, leaving buffer below R2’s 10 GB free monthly storage allowance.
 - Uploaded images are resized/compressed before storage.
 - Max image dimension: `1200px`.
 - Re-encoded JPEG quality: `0.78`.
@@ -274,11 +277,15 @@ R2_SECRET_ACCESS_KEY=<r2-secret-access-key>
 R2_PUBLIC_BUCKET=<bucket-for-product-images-and-logos>
 R2_PRIVATE_BUCKET=<bucket-for-payment-screenshots>
 R2_PUBLIC_BASE_URL=https://<your-r2-public-custom-domain>
+APP_STORAGE_LIMIT_MB=8500
+APP_UPLOADS_ENABLED=true
 ```
 
 `R2_PUBLIC_BASE_URL` is optional but recommended. It should point to the public custom domain connected to the public R2 bucket.
 
 If `APP_STORAGE_BACKEND=database`, new uploads are stored in Neon as bytes. This is useful for local/dev fallback but is not recommended for production growth.
+
+`APP_STORAGE_LIMIT_MB` is enforced by the application before every upload. It counts the `size_bytes` values tracked in `stored_files`, so it protects both database-backed files and R2-backed files. `APP_UPLOADS_ENABLED=false` is an emergency switch that blocks new uploads without deleting any existing files.
 
 ## How to link the services
 
@@ -368,6 +375,8 @@ For R2 production storage, change:
 
 ```text
 APP_STORAGE_BACKEND=r2
+APP_STORAGE_LIMIT_MB=8500
+APP_UPLOADS_ENABLED=true
 ```
 
 The checked-in `render.yaml` keeps `APP_STORAGE_BACKEND=database` as a safe default so deploys do not fail before R2 credentials are added.
@@ -380,8 +389,9 @@ The checked-in `render.yaml` keeps `APP_STORAGE_BACKEND=database` as a safe defa
 Owner uploads image
     -> Spring Boot receives multipart file
     -> FileStorageService resizes/compresses image
+    -> FileStorageService blocks upload if app storage quota would be exceeded
     -> Uploads bytes to R2 public bucket
-    -> Stores file metadata in Neon stored_files table
+    -> Stores file metadata and size_bytes in Neon stored_files table
     -> Product/business record stores /files/{storedFileId}
     -> Browser later requests /files/{storedFileId}
     -> App validates session/business access
@@ -394,8 +404,9 @@ Owner uploads image
 Customer or owner uploads payment screenshot
     -> Spring Boot receives multipart file
     -> FileStorageService resizes/compresses image
+    -> FileStorageService blocks upload if app storage quota would be exceeded
     -> Uploads bytes to R2 private bucket
-    -> Stores file metadata in Neon stored_files table
+    -> Stores file metadata and size_bytes in Neon stored_files table
     -> Order stores /files/{storedFileId}
     -> Browser later requests /files/{storedFileId}
     -> App checks user is owner/staff/platform admin or matching order customer
@@ -425,6 +436,7 @@ Current migrations:
 ```text
 V1__initial_schema.sql
 V2__stored_file_metadata.sql
+V3__stored_file_size_bytes.sql
 ```
 
 Important rules:
