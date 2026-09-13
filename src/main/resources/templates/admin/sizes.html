@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sizes</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <section class="card">
+        <h1>Sizes</h1>
+        <p class="muted">Sizes are unique per business. Defaults include 34 (XS), 36 (S), 38 (M), 40 (L), 42 (XL), and 44 (XXL).</p>
+        <form method="post" th:action="@{/b/{slug}/admin/sizes(slug=${business.slug})}">
+            <div class="grid">
+                <div><label>Size</label><input name="label" placeholder="46 (3XL)" required></div>
+            </div>
+            <div class="actions"><button>Add size</button></div>
+        </form>
+    </section>
+
+    <div class="table-wrap" style="margin-top:18px">
+        <table>
+            <thead><tr><th>Size</th><th>Update</th></tr></thead>
+            <tbody>
+            <tr th:each="size : ${sizes}">
+                <td th:text="${size.label}"></td>
+                <td>
+                    <form method="post" th:action="@{/b/{slug}/admin/sizes(slug=${business.slug})}">
+                        <input type="hidden" name="id" th:value="${size.id}">
+                        <div class="grid">
+                            <div><label>Size</label><input name="label" th:value="${size.label}" required></div>
+                        </div>
+                        <div class="actions"><button class="secondary">Save</button></div>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

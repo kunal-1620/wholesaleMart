@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Detail</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}"><pre th:text="${error}"></pre></div>
+    <section class="card">
+        <h1 th:text="'Order #' + ${order.id}"></h1>
+        <div class="grid">
+            <div>
+                <label>Customer</label>
+                <p><strong th:text="${order.customer.name}">Customer name</strong></p>
+                <p class="muted" th:if="${order.customer.companyName}" th:text="${order.customer.companyName}">Company</p>
+                <p class="muted" th:text="${'Phone: ' + order.customer.phone}">Phone</p>
+            </div>
+            <div>
+                <label>Customer Details</label>
+                <p th:text="${'Tier: ' + order.customer.tier}">Tier</p>
+                <p th:text="${'Status: ' + (order.customer.active ? 'Active' : 'Inactive')}">Status</p>
+                <p class="muted" th:if="${order.customer.address}" th:text="${order.customer.address}">Address</p>
+            </div>
+            <div>
+                <label>Order</label>
+                <p><strong>Status:</strong> <span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></p>
+                <p><strong>Total:</strong> <span th:text="${order.totalAmount}"></span></p>
+            </div>
+        </div>
+        <p th:if="${order.transactionId}"><strong>Transaction ID:</strong> <span th:text="${order.transactionId}"></span></p>
+        <p th:if="${order.paymentProofPath}"><a th:href="${order.paymentProofPath}" target="_blank">Open payment screenshot</a></p>
+        <div class="notice error" th:if="${order.outOfStockSummary}">
+            <strong>Out-of-stock items</strong>
+            <pre th:text="${order.outOfStockSummary}"></pre>
+        </div>
+        <div class="notice error" th:if="${stockIssues != null && !stockIssues.isEmpty()}">
+            <strong>Current stock warning</strong>
+            <p>These lines cannot be safely approved or confirmed until the order is updated.</p>
+            <p th:each="issue : ${stockIssues}" th:text="${issue}"></p>
+        </div>
+        <div class="actions">
+            <a class="button secondary" th:href="@{/b/{slug}/admin/orders/{id}/invoice.pdf(slug=${business.slug},id=${order.id})}">Download invoice PDF</a>
+            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/approve(slug=${business.slug},id=${order.id})}"><button>Approve</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/reject(slug=${business.slug},id=${order.id})}"><button class="danger">Reject</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PAYMENT_SUBMITTED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/verify-payment(slug=${business.slug},id=${order.id})}"><button>Verify payment and reduce inventory</button></form>
+            <form class="inline-form" th:if="${order.status.name() == 'PAID_CONFIRMED'}" method="post" th:action="@{/b/{slug}/admin/orders/{id}/complete(slug=${business.slug},id=${order.id})}"><button>Mark complete</button></form>
+        </div>
+    </section>
+
+    <section class="card" style="margin-top:18px" th:if="${order.status.name() == 'APPROVED_AWAITING_PAYMENT' || order.status.name() == 'PAYMENT_SUBMITTED' || order.status.name() == 'OUT_OF_STOCK'}">
+        <h2>Owner Payment Entry</h2>
+        <p class="muted">Use this when the customer sends payment details outside the portal. Saving payment details moves the order to payment submitted; verifying payment deducts inventory.</p>
+        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data">
+            <div class="grid">
+                <div><label>Transaction ID</label><input name="transactionId" th:value="${order.transactionId}" required></div>
+                <div><label>Payment screenshot</label><input name="proof" type="file" accept="image/*"></div>
+            </div>
+            <div class="actions"><button>Save payment details</button></div>
+        </form>
+    </section>
+
+    <h2 style="margin-top:24px">Items</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Product ID</th><th>Product</th><th>Colour</th><th>Size set</th><th>Qty</th><th>Set price</th><th>Stock issue</th><th th:if="${order.status.name() != 'PAID_CONFIRMED' && order.status.name() != 'COMPLETED'}">Edit</th></tr></thead>
+            <tbody>
+            <tr th:each="item : ${items}" th:classappend="${item.outOfStock ? 'oos' : ''}">
+                <td th:text="${productCodesByItem[item.id]}">P0001</td>
+                <td th:text="${item.productName}"></td>
+                <td th:text="${item.colorName}"></td>
+                <td th:text="${item.sizeSetName + ' (' + item.sizeLabels + ')'}"></td>
+                <td th:text="${item.quantity}"></td>
+                <td th:text="${item.priceEach}"></td>
+                <td th:text="${item.outOfStockReason ?: '-'}"></td>
+                <td th:if="${order.status.name() != 'PAID_CONFIRMED' && order.status.name() != 'COMPLETED'}">
+                    <div class="row-actions">
+                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/quantity(slug=${business.slug},id=${order.id}, itemId=${item.id})}">
+                            <input type="number" name="quantity" min="1" th:value="${item.quantity}">
+                            <button class="secondary">Update qty</button>
+                        </form>
+                        <form class="row-action-form" method="post" th:action="@{/b/{slug}/admin/orders/{id}/items/{itemId}/remove(slug=${business.slug},id=${order.id}, itemId=${item.id})}">
+                            <button class="danger">Remove</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <section class="card" style="margin-top:18px" th:if="${order.status.name() != 'PAID_CONFIRMED' && order.status.name() != 'COMPLETED'}">
+        <h2>Add new Items</h2>
+        <p class="muted">Add replacement colour/set options before final payment. Use the Items section above to update quantities or remove unavailable items.</p>
+        <form method="post" th:action="@{/b/{slug}/admin/orders/{id}/items(slug=${business.slug},id=${order.id})}">
+            <div class="grid">
+                <div>
+                    <label>Product colour</label>
+                    <select name="productColorId" required>
+                        <option th:each="color : ${colors}" th:value="${color.id}" th:text="${color.product.productCode + ' / ' + color.product.name + ' / ' + color.name}"></option>
+                    </select>
+                </div>
+                <div>
+                    <label>Size set</label>
+                    <select name="sizeSetId" required>
+                        <option th:each="set : ${sizeSets}" th:value="${set.id}" th:text="${set.product.productCode + ' / ' + set.product.name + ' / ' + set.name + ' (' + set.sizeLabels + ')'}"></option>
+                    </select>
+                </div>
+                <div><label>Quantity</label><input type="number" name="quantity" min="1" value="1" required></div>
+            </div>
+            <div class="actions"><button>Add item</button></div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cart</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}"><pre th:text="${error}"></pre></div>
+    <h1>Cart</h1>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Product ID</th><th>Product</th><th>Colour</th><th>Size set</th><th>Set price</th><th>Qty</th><th>Line total</th><th>Actions</th></tr></thead>
+            <tbody>
+            <tr th:each="line, iter : ${cart}">
+                <td th:text="${line.productCode ?: '-'}">P0001</td>
+                <td th:text="${line.productName}"></td>
+                <td th:text="${line.colorName}"></td>
+                <td th:text="${line.sizeSetName + ' (' + line.sizeLabels + ')'}"></td>
+                <td th:text="${line.priceEach}"></td>
+                <td>
+                    <form class="quantity-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/quantity(slug=${business.slug},index=${iter.index})}">
+                        <input name="quantity" type="number" min="1" step="1" th:value="${line.quantity}" aria-label="Quantity">
+                        <button class="secondary">Update</button>
+                    </form>
+                </td>
+                <td th:text="${line.lineTotal()}"></td>
+                <td>
+                    <form class="inline-form" method="post" th:action="@{/b/{slug}/cart/items/{index}/remove(slug=${business.slug},index=${iter.index})}">
+                        <button class="danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(cart)}">
+                <td colspan="8" class="empty-state">Your cart is empty.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <h2 style="margin-top:18px" th:text="'Total: ' + ${total}"></h2>
+    <div class="actions">
+        <form method="post" th:action="@{/b/{slug}/cart/submit(slug=${business.slug})}"><button>Submit order request</button></form>
+        <form method="post" th:action="@{/b/{slug}/cart/clear(slug=${business.slug})}"><button class="secondary">Clear cart</button></form>
+    </div>
+    <p class="muted">Inventory is not reduced yet. Stock is reduced only after the owner approves the order, you submit payment proof, and the owner verifies payment.</p>
+</main>
+</body>
+</html>

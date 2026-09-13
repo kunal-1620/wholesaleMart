@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Analytics</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <section class="card">
+        <h1>Business Analytics</h1>
+        <form method="get" th:action="@{/b/{slug}/admin/analytics(slug=${business.slug})}">
+            <div class="grid">
+                <div><label>From</label><input type="date" name="from" th:value="${summary.from}"></div>
+                <div><label>To</label><input type="date" name="to" th:value="${summary.to}"></div>
+            </div>
+            <div class="actions"><button>Apply date range</button></div>
+        </form>
+    </section>
+
+    <section class="stats" style="margin-top:18px">
+        <div class="stat"><strong th:text="${summary.orderCount}">0</strong><span>Total orders</span></div>
+        <div class="stat"><strong th:text="${summary.soldOrderCount}">0</strong><span>Paid/confirmed orders</span></div>
+        <div class="stat"><strong th:text="${summary.revenue}">0</strong><span>Revenue</span></div>
+        <div class="stat"><strong th:text="${summary.setsSold}">0</strong><span>Sets sold</span></div>
+        <div class="stat"><strong th:text="${summary.piecesSold}">0</strong><span>Pieces sold</span></div>
+    </section>
+
+    <div class="grid" style="margin-top:18px">
+        <section class="card">
+            <h2>Orders by Status</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Status</th><th>Orders</th></tr></thead>
+                    <tbody>
+                    <tr th:each="entry : ${summary.statusCounts}">
+                        <td th:text="${entry.key}"></td>
+                        <td th:text="${entry.value}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="card">
+            <h2>Category Demand</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Category</th><th>Orders</th><th>Sets</th><th>Pieces</th></tr></thead>
+                    <tbody>
+                    <tr th:each="row : ${summary.categoryDemand}">
+                        <td th:text="${row.label}"></td>
+                        <td th:text="${row.orders}"></td>
+                        <td th:text="${row.sets}"></td>
+                        <td th:text="${row.pieces}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="card" style="margin-top:18px">
+        <h2>Most Demanded Products</h2>
+        <p class="muted">Demand counts all non-filtered order requests in the date range, even before payment confirmation.</p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Product ID</th><th>Product</th><th>Order lines</th><th>Sets requested</th><th>Pieces requested</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${summary.mostDemandedProducts}">
+                    <td th:text="${row.productCode}">P0001</td>
+                    <td th:text="${row.label}"></td>
+                    <td th:text="${row.orders}"></td>
+                    <td th:text="${row.sets}"></td>
+                    <td th:text="${row.pieces}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+        <h2>Highly Sold Products</h2>
+        <p class="muted">Sold counts only paid/confirmed or completed orders.</p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Product ID</th><th>Product</th><th>Order lines</th><th>Sets sold</th><th>Pieces sold</th><th>Amount</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${summary.highlySoldProducts}">
+                    <td th:text="${row.productCode}">P0001</td>
+                    <td th:text="${row.label}"></td>
+                    <td th:text="${row.orders}"></td>
+                    <td th:text="${row.sets}"></td>
+                    <td th:text="${row.pieces}"></td>
+                    <td th:text="${row.amount}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+        <h2>Frequently Out-of-Stock Items</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Product ID</th><th>Product / Colour / Set</th><th>Occurrences</th><th>Sets impacted</th><th>Pieces impacted</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${summary.frequentlyOutOfStock}">
+                    <td th:text="${row.productCode}">P0001</td>
+                    <td th:text="${row.label}"></td>
+                    <td th:text="${row.orders}"></td>
+                    <td th:text="${row.sets}"></td>
+                    <td th:text="${row.pieces}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+        <h2>Customer Activity</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Customer</th><th>Phone</th><th>Tier</th><th>Orders</th><th>Spend</th><th>Last order</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${summary.customerRows}">
+                    <td th:text="${row.customer.name}"></td>
+                    <td th:text="${row.customer.phone}"></td>
+                    <td th:text="'Tier ' + ${row.customer.tier}"></td>
+                    <td th:text="${row.orders}"></td>
+                    <td th:text="${row.spend}"></td>
+                    <td th:text="${row.lastOrderAt ?: '-'}"></td>
+                    <td><a th:href="@{/b/{slug}/admin/customers/{id}/activity(slug=${business.slug},id=${row.customer.id})}">Open</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

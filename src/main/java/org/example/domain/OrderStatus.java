@@ -1,0 +1,12 @@
+package org.example.domain;
+
+public enum OrderStatus {
+    PENDING_APPROVAL,
+    CANCELLED_BY_CUSTOMER,
+    REJECTED,
+    APPROVED_AWAITING_PAYMENT,
+    PAYMENT_SUBMITTED,
+    PAID_CONFIRMED,
+    OUT_OF_STOCK,
+    COMPLETED
+}

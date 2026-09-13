@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Platform Admin</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" src="/placeholder-logo.svg" alt=""><span>Platform Admin</span></div>
+    <nav class="nav">
+        <a href="/platform">Businesses</a>
+        <form class="inline-form" method="post" action="/logout"><button class="secondary">Logout</button></form>
+    </nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <section class="card">
+        <h1>Businesses</h1>
+        <p class="muted">Superadmin can add businesses, update payment/contact details, create owners, and switch into any business admin portal.</p>
+        <div class="actions"><a class="button" href="/platform/businesses/new">Add Business</a></div>
+    </section>
+    <div class="table-wrap" style="margin-top:18px">
+        <table>
+            <thead><tr><th>Logo</th><th>Name</th><th>Slug</th><th>Business URLs</th><th>Contact</th><th>Payment Instructions</th><th>Actions</th></tr></thead>
+            <tbody>
+            <tr th:each="business : ${businesses}">
+                <td><img class="table-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""></td>
+                <td th:text="${business.name}"></td>
+                <td><code th:text="${business.slug}"></code></td>
+                <td><a th:href="@{/b/{slug}/login(slug=${business.slug})}">Login</a> · <a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Shop</a></td>
+                <td th:text="${business.contactPhone ?: '-'}"></td>
+                <td th:text="${business.paymentInstructions ?: '-'}"></td>
+                <td>
+                    <div class="actions">
+                        <a class="button secondary" th:href="@{/platform/businesses/{id}(id=${business.id})}">Edit</a>
+                        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}">
+                            <button>Manage</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

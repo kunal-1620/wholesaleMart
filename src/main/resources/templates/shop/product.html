@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${product.name}">Product</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}"><pre th:text="${error}"></pre></div>
+    <section class="card">
+        <p><span class="badge" th:text="${product.productCode}">P0001</span></p>
+        <h1 th:text="${product.name}"></h1>
+        <p th:text="${product.description}"></p>
+        <p><strong th:text="${product.price}"></strong> per item. Set total is item price × number of sizes in the selected set.</p>
+        <form method="post" th:action="@{/b/{slug}/cart/add(slug=${business.slug})}">
+            <div class="grid">
+                <div>
+                    <label>Colour to add</label>
+                    <select name="productColorId" required>
+                        <option th:each="color : ${colors}" th:value="${color.id}" th:text="${color.name}"></option>
+                    </select>
+                </div>
+            </div>
+            <h3>Quantity by set</h3>
+            <p class="muted">Enter quantity for each fixed size set you want. Keep quantity as 0 for sets you do not want.</p>
+            <div class="grid">
+                <div th:each="set : ${sizeSets}">
+                    <label th:for="${'quantity_' + set.id}" th:text="${set.name + ' (' + set.sizeLabels + ') - Set price: ' + setPriceBySet[set.id]}"></label>
+                    <input th:id="${'quantity_' + set.id}" th:name="${'quantity_' + set.id}" type="number" min="0" step="1" value="0">
+                </div>
+            </div>
+            <div class="actions"><button>Add to cart</button></div>
+        </form>
+    </section>
+    <h2 style="margin-top:24px">Colour-wise stock</h2>
+    <section class="grid">
+        <article class="card" th:each="color : ${colors}">
+            <img class="image" th:if="${color.imagePath}" th:src="${color.imagePath}" alt="">
+            <h3 th:text="${color.name}"></h3>
+            <p class="badge-row">
+                <span class="badge" th:each="stock : ${stockByColor[color.id]}" th:text="${stock.sizeLabel + ': ' + stock.quantity}"></span>
+            </p>
+            <div class="cart-summary">
+                <h4>Added to cart</h4>
+                <p class="muted" th:if="${#lists.isEmpty(cartQuantityLabelsByColor[color.id])}">Not added to cart yet.</p>
+                <p class="badge-row" th:unless="${#lists.isEmpty(cartQuantityLabelsByColor[color.id])}">
+                    <span class="badge cart-badge" th:each="cartQty : ${cartQuantityLabelsByColor[color.id]}" th:text="${cartQty}"></span>
+                </p>
+            </div>
+        </article>
+    </section>
+</main>
+</body>
+</html>

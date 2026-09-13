@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fixed Size Sets</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <section class="card">
+        <h1>Fixed Size Sets</h1>
+        <p class="muted">Each selected size means exactly 1 piece inside the set. Set names are unique per business.</p>
+        <form method="post" th:action="@{/b/{slug}/admin/sets(slug=${business.slug})}">
+            <div class="grid">
+                <div><label>Set name</label><input name="name" placeholder="Set A" required></div>
+                <div>
+                    <label>Sizes in this set</label>
+                    <select class="multi-select" name="sizeIds" multiple required>
+                        <option th:each="size : ${sizes}" th:value="${size.id}" th:text="${size.label}"></option>
+                    </select>
+                </div>
+            </div>
+            <p class="muted">Hold Command/Ctrl to select multiple sizes.</p>
+            <div class="actions"><button>Add set</button></div>
+        </form>
+    </section>
+
+    <div class="table-wrap" style="margin-top:18px">
+        <table>
+            <thead><tr><th>Name</th><th>Sizes</th><th>Update</th></tr></thead>
+            <tbody>
+            <tr th:each="set : ${sets}">
+                <td th:text="${set.name}"></td>
+                <td th:text="${set.sizeLabels}"></td>
+                <td>
+                    <form method="post" th:action="@{/b/{slug}/admin/sets(slug=${business.slug})}">
+                        <input type="hidden" name="id" th:value="${set.id}">
+                        <div class="grid">
+                            <div><label>Set name</label><input name="name" th:value="${set.name}" required></div>
+                            <div>
+                                <label>Sizes</label>
+                                <select class="multi-select" name="sizeIds" multiple required>
+                                    <option th:each="size : ${sizes}" th:value="${size.id}" th:selected="${set.sizeLabels.contains(size.label)}" th:text="${size.label}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="actions"><button class="secondary">Save</button></div>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

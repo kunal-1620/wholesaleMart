@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>B2B Clothing Login</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <img class="brand-logo" src="/placeholder-logo.svg" alt="">
+        <span th:text="${business != null ? business.name : 'Platform Admin'}">B2B Clothing Portal</span>
+    </div>
+</header>
+<main class="login-page">
+    <section class="panel">
+        <h1 th:text="${business != null ? business.name + ' Login' : 'Platform Admin Login'}">B2B Clothing Portal</h1>
+        <p class="muted" th:if="${business != null}">No public sign-up. Login works only for owner-created admin and customer accounts for this business.</p>
+        <p class="muted" th:if="${business == null}">This common login is only for the platform/superadmin account. Business owners and customers should use their business URL.</p>
+        <div class="notice error" th:if="${error}" th:text="${error}"></div>
+        <form method="post" th:action="${loginAction ?: '/login'}">
+            <label for="phone">Phone number</label>
+            <input id="phone" name="phone" inputmode="tel" required>
+            <label for="pin">PIN</label>
+            <input id="pin" name="pin" type="password" required>
+            <div class="actions">
+                <button type="submit">Login</button>
+            </div>
+        </form>
+        <p class="muted" th:if="${business == null}">Platform admin: 7000000000 / 0000</p>
+    </section>
+</main>
+</body>
+</html>

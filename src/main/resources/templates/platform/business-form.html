@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Business Setup</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.id == null ? 'New Business' : business.name}">Business Setup</span></div>
+    <nav class="nav">
+        <a href="/platform">Businesses</a>
+        <form class="inline-form" method="post" action="/logout"><button class="secondary">Logout</button></form>
+    </nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <section class="card">
+        <h1 th:text="${business.id == null ? 'Add Business' : 'Edit Business'}">Business</h1>
+        <form method="post" action="/platform/businesses" enctype="multipart/form-data">
+            <input type="hidden" name="id" th:value="${business.id}">
+            <div class="grid">
+                <div><label>Business name</label><input name="name" th:value="${business.name}" required></div>
+                <div>
+                    <label>Business slug</label>
+                    <input name="slug" th:value="${business.slug}" pattern="[a-z0-9-]+" placeholder="agarwal" required>
+                    <p class="muted">Used for tenant URLs like /b/agarwal/login. Lowercase letters, numbers, and hyphens.</p>
+                </div>
+                <div><label>Contact phone</label><input name="contactPhone" th:value="${business.contactPhone}"></div>
+                <div>
+                    <label>Business logo</label>
+                    <input name="logo" type="file" accept="image/*" th:required="${business.logoPath == null || business.logoPath.isBlank()}">
+                    <p class="muted" th:if="${business.logoPath}">Current logo is shown below. Upload a new file to replace it.</p>
+                </div>
+            </div>
+            <img class="brand-preview" th:if="${business.logoPath}" th:src="${business.logoPath}" alt="">
+            <label>Payment instructions</label>
+            <textarea name="paymentInstructions" th:text="${business.paymentInstructions}" placeholder="UPI/bank details, payment proof instructions, etc."></textarea>
+            <div class="actions"><button>Save business</button></div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${business.id != null}" style="margin-top:18px">
+        <h2>Add Owner / Staff</h2>
+        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}">
+            <div class="grid">
+                <div><label>Name</label><input name="name" required></div>
+                <div><label>Phone</label><input name="phone" required></div>
+                <div><label>PIN</label><input name="pin" required></div>
+                <div><label>Role</label><select name="role"><option value="BUSINESS_ADMIN">Owner</option><option value="STAFF">Staff</option></select></div>
+                <div><label>Status</label><select name="active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+            </div>
+            <div class="actions"><button>Add user</button></div>
+        </form>
+    </section>
+
+    <section th:if="${business.id != null}" style="margin-top:18px">
+        <h2>Owners & Staff</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th>Update</th></tr></thead>
+                <tbody>
+                <tr th:each="owner : ${owners}">
+                    <td th:text="${owner.name}"></td>
+                    <td th:text="${owner.phone}"></td>
+                    <td th:text="${owner.role}"></td>
+                    <td th:text="${owner.active ? 'Active' : 'Inactive'}"></td>
+                    <td th:if="${owner.role.name() != 'PLATFORM_ADMIN'}">
+                        <form method="post" th:action="@{/platform/businesses/{id}/owners(id=${business.id})}">
+                            <input type="hidden" name="ownerId" th:value="${owner.id}">
+                            <div class="grid">
+                                <div><label>Name</label><input name="name" th:value="${owner.name}" required></div>
+                                <div><label>Phone</label><input name="phone" th:value="${owner.phone}" required></div>
+                                <div><label>New PIN</label><input name="pin" placeholder="Leave blank to keep current PIN"></div>
+                                <div><label>Role</label><select name="role"><option value="BUSINESS_ADMIN" th:selected="${owner.role.name() == 'BUSINESS_ADMIN'}">Owner</option><option value="STAFF" th:selected="${owner.role.name() == 'STAFF'}">Staff</option></select></div>
+                                <div><label>Status</label><select name="active"><option value="true" th:selected="${owner.active}">Active</option><option value="false" th:selected="${!owner.active}">Inactive</option></select></div>
+                            </div>
+                            <div class="actions"><button>Save user</button></div>
+                        </form>
+                    </td>
+                    <td th:if="${owner.role.name() == 'PLATFORM_ADMIN'}" class="muted">Platform account</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <form method="post" th:action="@{/platform/businesses/{id}/switch(id=${business.id})}">
+            <div class="actions"><button>Manage this business</button></div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

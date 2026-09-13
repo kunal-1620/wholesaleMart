@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Business logo placeholder">
+  <rect width="128" height="128" rx="18" fill="#14231f"/>
+  <path d="M35 42h58l-8 44H43L35 42Z" fill="#e9efe9"/>
+  <path d="M50 42c2-14 26-14 28 0" fill="none" stroke="#e9efe9" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="49" cy="58" r="4" fill="#1f5f59"/>
+  <circle cx="79" cy="58" r="4" fill="#1f5f59"/>
+</svg>

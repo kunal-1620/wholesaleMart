@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Product</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <section class="card">
+        <h1 th:text="${product.id == null ? 'Add Product' : 'Edit Product'}">Product</h1>
+        <div class="notice" th:if="${activationIssue != null}">
+            <strong>Setup required before activation.</strong>
+            <span th:text="${activationIssue}"></span>
+        </div>
+        <form method="post" th:action="@{/b/{slug}/admin/products(slug=${business.slug})}">
+            <input type="hidden" name="id" th:value="${product.id}">
+            <p class="muted" th:if="${product.createdAt != null}" th:text="${'Created: ' + product.createdAt}"></p>
+            <div class="grid">
+                <div>
+                    <label>Product ID</label>
+                    <input name="productCode" th:value="${product.productCode}" required>
+                    <p class="muted">Unique within this business. Example: P0001.</p>
+                </div>
+                <div><label>Name</label><input name="name" th:value="${product.name}" required></div>
+                <div>
+                    <label>Category</label>
+                    <select name="categoryId" required>
+                        <option value="">Select category</option>
+                        <option th:each="category : ${categories}" th:value="${category.id}" th:selected="${product.category != null && product.category.id == category.id}" th:text="${category.name}"></option>
+                    </select>
+                    <p class="muted"><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Manage categories</a></p>
+                </div>
+                <div><label>Item price</label><input name="price" type="number" min="0" step="0.01" th:value="${product.price}" required></div>
+                <div><label>Visible to</label><select name="minimumTierRequired"><option value="1" th:selected="${product.minimumTierRequired == 1}">Tier 1 only</option><option value="2" th:selected="${product.minimumTierRequired == 2}">Tier 1 and 2</option><option value="3" th:selected="${product.minimumTierRequired == 3}">All tiers</option></select></div>
+                <div>
+                    <label>Status</label>
+                    <select name="active">
+                        <option value="true" th:selected="${product.active}">Active</option>
+                        <option value="false" th:selected="${!product.active}">Inactive / Draft</option>
+                    </select>
+                    <p class="muted">Active products require at least one colour with usable stock.</p>
+                </div>
+            </div>
+            <label>Description</label><textarea name="description" th:text="${product.description}"></textarea>
+            <label>Fixed size sets</label>
+            <select class="multi-select" name="setTemplateIds" multiple required>
+                <option th:each="set : ${setTemplates}" th:value="${set.id}" th:selected="${selectedSetTemplateIds != null && selectedSetTemplateIds.contains(set.id)}" th:text="${set.name + ' (' + set.sizeLabels + ')'}"></option>
+            </select>
+            <p class="muted"><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Manage fixed size sets</a>. Hold Command/Ctrl to select multiple sets.</p>
+            <p class="muted">Each size listed in a set is exactly 1 piece. Quantity 5 of S,M,L deducts S -5, M -5, L -5.</p>
+            <div class="actions"><button>Save product</button></div>
+        </form>
+    </section>
+
+    <section class="card" th:if="${product.id != null}" style="margin-top:18px">
+        <h2>Add Colour Option</h2>
+        <form method="post" th:action="@{/b/{slug}/admin/products/{id}/colors(slug=${business.slug},id=${product.id})}" enctype="multipart/form-data">
+            <div class="grid">
+                <div><label>Colour name</label><input name="colorName" required></div>
+                <div><label>Photo</label><input name="image" type="file" accept="image/*"></div>
+            </div>
+            <label>Colour-wise inventory</label>
+            <p class="muted" th:if="${#lists.isEmpty(productSizeLabels)}">Save fixed size sets on the product first. Inventory fields are created from the sizes present in those selected sets.</p>
+            <div class="inventory-grid" th:if="${!#lists.isEmpty(productSizeLabels)}">
+                <div th:each="sizeLabel : ${productSizeLabels}">
+                    <label th:text="${sizeLabel}">36</label>
+                    <input type="hidden" name="sizeLabels" th:value="${sizeLabel}">
+                    <input name="quantities" type="number" min="0" step="1" value="0" required>
+                </div>
+            </div>
+            <div class="actions" th:if="${!#lists.isEmpty(productSizeLabels)}"><button>Add colour</button></div>
+        </form>
+    </section>
+
+    <section th:if="${product.id != null}" style="margin-top:18px">
+        <h2>Colours and Inventory</h2>
+        <div class="notice" th:if="${#lists.isEmpty(colors)}">No colour options added yet, please add colour and inventory details.</div>
+        <div class="grid">
+            <article class="card" th:each="color : ${colors}">
+                <img class="image" th:if="${color.imagePath}" th:src="${color.imagePath}" alt="">
+                <h3 th:text="${color.name}"></h3>
+                <p class="muted">Current stock</p>
+                <p>
+                    <span class="badge" th:each="stock : ${stockByColor[color.id]}" th:text="${stock.sizeLabel + ': ' + stock.quantity}"></span>
+                </p>
+                <form method="post" th:action="@{/b/{slug}/admin/colors/{id}/inventory(slug=${business.slug},id=${color.id})}">
+                    <label>Update inventory</label>
+                    <p class="muted" th:if="${#lists.isEmpty(productSizeLabels)}">Save fixed size sets on the product first. Inventory fields are created from the sizes present in those selected sets.</p>
+                    <div class="inventory-grid" th:if="${!#lists.isEmpty(productSizeLabels)}">
+                        <div th:each="sizeLabel : ${productSizeLabels}">
+                            <label th:text="${sizeLabel}">36</label>
+                            <input type="hidden" name="sizeLabels" th:value="${sizeLabel}">
+                            <input name="quantities" type="number" min="0" step="1" required th:value="${stockQuantityByColor.get(color.id) != null && stockQuantityByColor.get(color.id).get(sizeLabel) != null ? stockQuantityByColor.get(color.id).get(sizeLabel) : 0}">
+                        </div>
+                    </div>
+                    <div class="actions" th:if="${!#lists.isEmpty(productSizeLabels)}"><button>Update</button></div>
+                </form>
+            </article>
+        </div>
+    </section>
+    <div class="dialog-backdrop" th:if="${activatePromptProductId != null}">
+        <section class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="activateDialogTitle">
+            <div class="dialog-icon">✓</div>
+            <h2 id="activateDialogTitle">Make this product active?</h2>
+            <p>This product is still inactive after your latest colour or stock update. Do you want customers to see and order this product now?</p>
+            <p class="muted">We will first check that at least one selected fixed size set has stock for every size in that set.</p>
+            <div class="dialog-actions">
+                <a class="button secondary" th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${activatePromptProductId})}">Keep inactive</a>
+                <form method="post" th:action="@{/b/{slug}/admin/products/{id}/activate(slug=${business.slug},id=${activatePromptProductId})}">
+                    <button>Make active</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
+</html>

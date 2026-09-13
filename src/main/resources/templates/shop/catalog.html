@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Catalog</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <h1>Products</h1>
+    <p class="muted">Showing active products available for your account.</p>
+    <section class="card" style="margin-bottom:18px">
+        <form method="get" th:action="@{/b/{slug}/shop(slug=${business.slug})}">
+            <div class="grid">
+                <div>
+                    <label>Search</label>
+                    <input name="q" placeholder="Product ID or name" th:value="${q}">
+                </div>
+                <div>
+                    <label>Category</label>
+                    <select name="categoryId">
+                        <option value="">All categories</option>
+                        <option th:each="category : ${categories}" th:value="${category.id}" th:selected="${categoryId != null && categoryId == category.id}" th:text="${category.name}"></option>
+                    </select>
+                </div>
+                <div>
+                    <label>Colour</label>
+                    <select name="colorName">
+                        <option value="">All colours</option>
+                        <option th:each="color : ${colorOptions}" th:value="${color}" th:selected="${colorName == color}" th:text="${color}"></option>
+                    </select>
+                </div>
+                <div>
+                    <label>Fixed set / size</label>
+                    <select name="setName">
+                        <option value="">All sets and sizes</option>
+                        <option th:each="setOption : ${setOptions}" th:value="${setOption}" th:selected="${setName == setOption}" th:text="${setOption}"></option>
+                    </select>
+                </div>
+                <div>
+                    <label>Min item price</label>
+                    <input name="minPrice" type="number" min="0" step="0.01" th:value="${minPrice}">
+                </div>
+                <div>
+                    <label>Max item price</label>
+                    <input name="maxPrice" type="number" min="0" step="0.01" th:value="${maxPrice}">
+                </div>
+                <div>
+                    <label>Sort</label>
+                    <select name="sort">
+                        <option value="recent" th:selected="${sort == null || sort == 'recent'}">Recently added</option>
+                        <option value="productId" th:selected="${sort == 'productId'}">Product ID</option>
+                        <option value="name" th:selected="${sort == 'name'}">Name A-Z</option>
+                        <option value="priceAsc" th:selected="${sort == 'priceAsc'}">Price low to high</option>
+                        <option value="priceDesc" th:selected="${sort == 'priceDesc'}">Price high to low</option>
+                        <option value="category" th:selected="${sort == 'category'}">Category</option>
+                        <option value="popular" th:selected="${sort == 'popular'}">Most demanded / popular</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Availability</label>
+                    <label class="checkbox-line"><input name="inStockOnly" type="checkbox" value="true" th:checked="${inStockOnly}"> In stock only</label>
+                </div>
+            </div>
+            <div class="actions">
+                <button>Apply filters</button>
+                <a class="button secondary" th:href="@{/b/{slug}/shop(slug=${business.slug})}">Reset</a>
+            </div>
+        </form>
+    </section>
+    <section class="grid">
+        <article class="card product-card" th:each="product : ${products}">
+            <img class="image" th:src="${productImageById[product.id] ?: '/placeholder-logo.svg'}" alt="">
+            <p><span class="badge" th:text="${product.productCode}">P0001</span></p>
+            <h2 th:text="${product.name}"></h2>
+            <p class="muted" th:text="${product.category != null ? product.category.name : ''}"></p>
+            <p th:text="${product.description}"></p>
+            <p><strong th:text="${product.price}"></strong> per item.</p>
+            <a class="button" th:href="@{/b/{slug}/shop/products/{id}(slug=${business.slug},id=${product.id})}">View</a>
+        </article>
+    </section>
+    <p class="muted" th:if="${#lists.isEmpty(products)}">No products matched these filters.</p>
+</main>
+</body>
+</html>

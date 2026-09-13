@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Customer Activity</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <section class="card">
+        <h1 th:text="${activity.customer.name}">Customer</h1>
+        <p><strong>Business:</strong> <span th:text="${activity.customer.companyName ?: '-'}"></span></p>
+        <p><strong>Phone:</strong> <span th:text="${activity.customer.phone}"></span></p>
+        <p><strong>Tier:</strong> <span th:text="'Tier ' + ${activity.customer.tier}"></span></p>
+        <p><strong>Status:</strong> <span th:text="${activity.customer.active ? 'Active' : 'Inactive'}"></span></p>
+    </section>
+
+    <section class="stats" style="margin-top:18px">
+        <div class="stat"><strong th:text="${activity.orderCount}">0</strong><span>Total orders</span></div>
+        <div class="stat"><strong th:text="${activity.confirmedOrderCount}">0</strong><span>Confirmed orders</span></div>
+        <div class="stat"><strong th:text="${activity.spend}">0</strong><span>Confirmed spend</span></div>
+        <div class="stat"><strong th:text="${activity.lastOrderAt ?: '-'}">-</strong><span>Last order</span></div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+        <h2>Order History</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Status</th><th>Total</th><th>Created</th><th>Payment</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="order : ${activity.orders}">
+                    <td th:text="${order.id}"></td>
+                    <td><span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></td>
+                    <td th:text="${order.totalAmount}"></td>
+                    <td th:text="${order.createdAt}"></td>
+                    <td th:text="${order.transactionId ?: '-'}"></td>
+                    <td><a th:href="@{/b/{slug}/admin/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

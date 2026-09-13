@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+        <nav class="nav">
+            <a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a>
+            <a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a>
+            <a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a>
+            <a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a>
+            <a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a>
+            <a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a>
+            <a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a>
+            <a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a>
+            <a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a>
+            <form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="notice" th:if="${message}" th:text="${message}"></div>
+        <h1>Dashboard</h1>
+        <section class="stats">
+            <a class="stat stat-link" th:href="@{/b/{slug}/admin/orders(slug=${business.slug},status='PENDING_APPROVAL')}"><strong th:text="${pendingCount}">0</strong><span>Pending approvals</span><em>Review now</em></a>
+            <a class="stat stat-link" th:href="@{/b/{slug}/admin/orders(slug=${business.slug},status='PAYMENT_SUBMITTED')}"><strong th:text="${paymentCount}">0</strong><span>Payment proofs</span><em>Verify payments</em></a>
+            <a class="stat stat-link" th:href="@{/b/{slug}/admin/orders(slug=${business.slug},status='OUT_OF_STOCK')}"><strong th:text="${stockCount}">0</strong><span>Out-of-stock orders</span><em>Resolve items</em></a>
+        </section>
+        <div class="section-head">
+            <h2>Recent Orders</h2>
+            <a class="button secondary" th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">View all orders</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Customer</th><th>Status</th><th>Total</th><th></th></tr></thead>
+                <tbody>
+                <tr th:if="${orders == null || #lists.isEmpty(orders)}">
+                    <td colspan="5" class="empty-state">No orders yet. New customer orders will appear here immediately after submission.</td>
+                </tr>
+                <tr th:each="order : ${orders}">
+                    <td th:text="${order.id}"></td>
+                    <td th:text="${order.customer.name}"></td>
+                    <td><span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></td>
+                    <td th:text="${order.totalAmount}"></td>
+                    <td><a th:href="@{/b/{slug}/admin/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

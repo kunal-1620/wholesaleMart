@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Customers</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/products(slug=${business.slug})}">Products</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <section class="card">
+        <h2>Add Customer</h2>
+        <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}">
+            <div class="grid">
+                <div><label>Name</label><input name="name" required></div>
+                <div><label>Business name</label><input name="companyName" required></div>
+                <div><label>Phone</label><input name="phone" required></div>
+                <div><label>PIN</label><input name="pin" required></div>
+                <div><label>Tier</label><select name="tier"><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select></div>
+                <div><label>Active</label><select name="active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+            </div>
+            <label>Address</label><textarea name="address"></textarea>
+            <div class="actions"><button>Add customer</button></div>
+        </form>
+    </section>
+    <h2 style="margin-top:28px">Existing Customers</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Tier</th><th>Status</th><th>Activity</th><th>Change PIN / Details</th></tr></thead>
+            <tbody>
+            <tr th:each="customer : ${customers}">
+                <td th:text="${customer.name}"></td>
+                <td th:text="${customer.phone}"></td>
+                <td th:text="'Tier ' + ${customer.tier}"></td>
+                <td th:text="${customer.active ? 'Active' : 'Inactive'}"></td>
+                <td><a th:href="@{/b/{slug}/admin/customers/{id}/activity(slug=${business.slug},id=${customer.id})}">View activity</a></td>
+                <td>
+                    <form method="post" th:action="@{/b/{slug}/admin/customers(slug=${business.slug})}">
+                        <input type="hidden" name="id" th:value="${customer.id}">
+                        <input type="hidden" name="companyName" th:value="${customer.companyName}">
+                        <input type="hidden" name="address" th:value="${customer.address}">
+                        <label>Name</label><input name="name" th:value="${customer.name}" required>
+                        <label>Phone</label><input name="phone" th:value="${customer.phone}" required>
+                        <label>New PIN</label><input name="pin" placeholder="Leave blank to keep current PIN">
+                        <label>Tier</label><select name="tier" th:value="${customer.tier}"><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select>
+                        <label>Active</label><select name="active"><option value="true" th:selected="${customer.active}">Active</option><option value="false" th:selected="${!customer.active}">Inactive</option></select>
+                        <div class="actions"><button>Save</button></div>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,146 @@
+package org.example.service;
+
+import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
+import org.example.domain.Business;
+import org.example.domain.CustomerOrder;
+import org.example.domain.OrderItem;
+import org.springframework.stereotype.Service;
+
+import java.awt.Color;
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@Service
+public class InvoicePdfService {
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm");
+
+    public byte[] invoice(CustomerOrder order, List<OrderItem> items) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 36, 36, 42, 36);
+        PdfWriter.getInstance(document, output);
+        document.open();
+
+        Business business = order.getBusiness();
+        Font title = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+        Font heading = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
+        Font normal = FontFactory.getFont(FontFactory.HELVETICA, 10);
+        Font muted = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
+
+        Paragraph titleLine = new Paragraph("Order Invoice", title);
+        titleLine.setAlignment(Element.ALIGN_CENTER);
+        titleLine.setSpacingAfter(16);
+        document.add(titleLine);
+
+        PdfPTable header = new PdfPTable(2);
+        header.setWidthPercentage(100);
+        header.setWidths(new float[]{1.2f, 1f});
+        header.addCell(block("Seller", List.of(
+                business.getName(),
+                "Contact: " + blankSafe(business.getContactPhone())
+        ), heading, normal));
+        header.addCell(block("Invoice Details", List.of(
+                "Order ID: #" + order.getId(),
+                "Bill date: " + DATE_FORMAT.format(order.getCreatedAt()),
+                "Status: " + order.getStatus()
+        ), heading, normal));
+        header.addCell(block("Customer", List.of(
+                order.getCustomer().getName(),
+                "Business: " + blankSafe(order.getCustomer().getCompanyName()),
+                "Phone: " + order.getCustomer().getPhone(),
+                "Address: " + blankSafe(order.getCustomer().getAddress())
+        ), heading, normal));
+        header.addCell(block("Payment", List.of(
+                "Transaction ID: " + blankSafe(order.getTransactionId()),
+                "Payment submitted: " + (order.getPaymentSubmittedAt() == null ? "-" : DATE_FORMAT.format(order.getPaymentSubmittedAt())),
+                "Confirmed: " + (order.getConfirmedAt() == null ? "-" : DATE_FORMAT.format(order.getConfirmedAt()))
+        ), heading, normal));
+        header.setSpacingAfter(18);
+        document.add(header);
+
+        PdfPTable table = new PdfPTable(8);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{1f, 2.2f, 1f, 1.2f, 1.2f, 0.8f, 1f, 1f});
+        addHeader(table, "Product ID", heading);
+        addHeader(table, "Item", heading);
+        addHeader(table, "Colour", heading);
+        addHeader(table, "Size Set", heading);
+        addHeader(table, "Sizes", heading);
+        addHeader(table, "Qty", heading);
+        addHeader(table, "Set Price", heading);
+        addHeader(table, "Amount", heading);
+
+        for (OrderItem item : items) {
+            table.addCell(cell(item.getProductCode() == null || item.getProductCode().isBlank() ? "-" : item.getProductCode(), normal));
+            table.addCell(cell(item.getProductName(), normal));
+            table.addCell(cell(item.getColorName(), normal));
+            table.addCell(cell(item.getSizeSetName(), normal));
+            table.addCell(cell(item.getSizeLabels(), normal));
+            table.addCell(cell(String.valueOf(item.getQuantity()), normal));
+            table.addCell(cell(money(item.getPriceEach()), normal));
+            table.addCell(cell(money(item.getPriceEach().multiply(BigDecimal.valueOf(item.getQuantity()))), normal));
+        }
+        document.add(table);
+
+        Paragraph total = new Paragraph("Total Amount: " + money(order.getTotalAmount()), heading);
+        total.setAlignment(Element.ALIGN_RIGHT);
+        total.setSpacingBefore(16);
+        document.add(total);
+
+        if (order.getOutOfStockSummary() != null && !order.getOutOfStockSummary().isBlank()) {
+            Paragraph stock = new Paragraph("Stock Issues:\n" + order.getOutOfStockSummary(), muted);
+            stock.setSpacingBefore(14);
+            document.add(stock);
+        }
+
+        Paragraph footer = new Paragraph("Generated by Round1 B2B Clothing Commerce", muted);
+        footer.setAlignment(Element.ALIGN_CENTER);
+        footer.setSpacingBefore(24);
+        document.add(footer);
+
+        document.close();
+        return output.toByteArray();
+    }
+
+    private PdfPCell block(String heading, List<String> lines, Font headingFont, Font normalFont) {
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(10);
+        cell.setBorderColor(new Color(210, 210, 210));
+        cell.addElement(new Paragraph(heading, headingFont));
+        for (String line : lines) {
+            cell.addElement(new Paragraph(line, normalFont));
+        }
+        return cell;
+    }
+
+    private void addHeader(PdfPTable table, String text, Font font) {
+        PdfPCell cell = cell(text, font);
+        cell.setBackgroundColor(new Color(235, 238, 232));
+        table.addCell(cell);
+    }
+
+    private PdfPCell cell(String text, Font font) {
+        PdfPCell cell = new PdfPCell(new Phrase(blankSafe(text), font));
+        cell.setPadding(7);
+        cell.setBorderColor(new Color(220, 220, 220));
+        return cell;
+    }
+
+    private String money(BigDecimal value) {
+        return "INR " + value.setScale(2);
+    }
+
+    private String blankSafe(String value) {
+        return value == null || value.isBlank() ? "-" : value;
+    }
+}

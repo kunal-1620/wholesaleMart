@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Orders</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/cart(slug=${business.slug})}">Cart</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <div class="section-head">
+        <div>
+            <h1>My Orders</h1>
+            <p class="muted">Filter your orders by status and created date.</p>
+        </div>
+    </div>
+    <section class="card" style="margin-bottom:18px">
+        <form class="filters order-filter customer-order-filter" method="get" th:action="@{/b/{slug}/orders(slug=${business.slug})}">
+            <div>
+                <label>Status</label>
+                <select name="status">
+                    <option value="" th:selected="${selectedStatus == null}">All statuses</option>
+                    <option th:each="status : ${statuses}" th:value="${status}" th:text="${status}" th:selected="${selectedStatus == status}"></option>
+                </select>
+            </div>
+            <div><label>Created from</label><input type="date" name="createdFrom" th:value="${createdFrom}"></div>
+            <div><label>Created to</label><input type="date" name="createdTo" th:value="${createdTo}"></div>
+            <div class="filter-actions">
+                <button>Apply filters</button>
+                <a class="button secondary" th:href="@{/b/{slug}/orders(slug=${business.slug})}">Reset</a>
+            </div>
+        </form>
+    </section>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>Status</th><th>Total</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(orders)}">
+                <td colspan="5" class="empty-state">No orders found for this filter.</td>
+            </tr>
+            <tr th:each="order : ${orders}">
+                <td th:text="${order.id}"></td>
+                <td><span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></td>
+                <td th:text="${order.totalAmount}"></td>
+                <td th:text="${order.createdAt}"></td>
+                <td>
+                    <div class="actions" style="margin-top:0">
+                        <a th:href="@{/b/{slug}/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a>
+                        <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}">
+                            <button class="danger">Cancel</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Products</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
+    <nav class="nav"><a th:href="@{/b/{slug}/admin(slug=${business.slug})}">Dashboard</a><a th:href="@{/b/{slug}/admin/customers(slug=${business.slug})}">Customers</a><a th:href="@{/b/{slug}/admin/categories(slug=${business.slug})}">Categories</a><a th:href="@{/b/{slug}/admin/sizes(slug=${business.slug})}">Sizes</a><a th:href="@{/b/{slug}/admin/sets(slug=${business.slug})}">Sets</a><a th:href="@{/b/{slug}/admin/orders(slug=${business.slug})}">Orders</a><a th:href="@{/b/{slug}/admin/analytics(slug=${business.slug})}">Analytics</a><a th:if="${me.isPlatformAdmin()}" href="/platform">Platform</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><button class="secondary">Logout</button></form></nav>
+</header>
+<main class="container">
+    <div class="notice" th:if="${message}" th:text="${message}"></div>
+    <div class="actions"><a class="button" th:href="@{/b/{slug}/admin/products/new(slug=${business.slug})}">Add Product</a></div>
+    <div class="table-wrap" style="margin-top:18px">
+        <table>
+            <thead><tr><th>Product ID</th><th>Name</th><th>Category</th><th>Item price</th><th>Inventory</th><th>Visibility</th><th>Status</th><th>Readiness</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="product : ${products}">
+                <td th:text="${product.productCode ?: '-'}"></td>
+                <td th:text="${product.name}"></td>
+                <td th:text="${product.category != null ? product.category.name : '-'}"></td>
+                <td th:text="${product.price}"></td>
+                <td th:text="${inventorySummaryByProduct[product.id]}">36: 0</td>
+                <td th:text="'Tier ' + ${product.minimumTierRequired} + '+'"></td>
+                <td th:text="${product.active ? 'Active' : 'Inactive'}"></td>
+                <td>
+                    <span class="badge" th:if="${activationIssues[product.id] == null}">Ready</span>
+                    <span class="muted" th:if="${activationIssues[product.id] != null}" th:text="${activationIssues[product.id]}"></span>
+                </td>
+                <td th:text="${product.createdAt}"></td>
+                <td><a th:href="@{/b/{slug}/admin/products/{id}/edit(slug=${business.slug},id=${product.id})}">Edit</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
