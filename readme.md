@@ -68,20 +68,25 @@ There is no public sign-up. Admins create customers, set/change PINs, assign tie
 
 ## Hosting configuration
 
-Production is configured through environment variables. Use a managed PostgreSQL database and set:
+Production is configured through environment variables. The repo includes a Dockerfile and `render.yaml` for a Render Blueprint deployment with one web service and one managed PostgreSQL database.
+
+### Render deployment
+
+You do not need Docker installed locally. The Dockerfile is used by Render's cloud build environment when it deploys from GitHub.
+
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint from `kunal-1620/wholesaleMart`.
+3. Render will read `render.yaml`, build the Docker image, and create the `wholesalemart-db` PostgreSQL database.
+4. When Render prompts for secret values, set:
 
 ```text
-SPRING_DATASOURCE_URL=jdbc:postgresql://HOST:PORT/DB_NAME
-SPRING_DATASOURCE_USERNAME=...
-SPRING_DATASOURCE_PASSWORD=...
-SPRING_DATASOURCE_DRIVER=org.postgresql.Driver
-SPRING_JPA_HIBERNATE_DDL_AUTO=update
 APP_PLATFORM_ADMIN_PHONE=...
 APP_PLATFORM_ADMIN_PIN=...
-APP_PLATFORM_ADMIN_NAME=Platform Admin
-APP_BOOTSTRAP_BUSINESS_NAME=WholesaleMart Platform
-APP_BOOTSTRAP_BUSINESS_SLUG=platform
 ```
+
+5. After deploy, open the Render app URL and log in at `/login` with the platform admin phone and PIN.
+
+The Render blueprint injects database connection values through `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. If you host somewhere else, set those variables or override the standard Spring datasource properties with your provider's equivalent values.
 
 Demo data is disabled by default in production. `APP_PLATFORM_ADMIN_PHONE` and `APP_PLATFORM_ADMIN_PIN` are required for a fresh hosted database so the first platform admin can log in.
 

@@ -1,0 +1,12 @@
+.git
+.idea
+.mvn
+target
+data
+uploads
+*.db
+*.trace.db
+*.lock.db
+.DS_Store
+README.md
+readme.md

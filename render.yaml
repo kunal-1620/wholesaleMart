@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: wholesalemart
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    healthCheckPath: /login
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: SPRING_DATASOURCE_DRIVER
+        value: org.postgresql.Driver
+      - key: DB_HOST
+        fromDatabase:
+          name: wholesalemart-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: wholesalemart-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: wholesalemart-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: wholesalemart-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: wholesalemart-db
+          property: password
+      - key: APP_PLATFORM_ADMIN_PHONE
+        sync: false
+      - key: APP_PLATFORM_ADMIN_PIN
+        sync: false
+      - key: APP_PLATFORM_ADMIN_NAME
+        value: Platform Admin
+      - key: APP_BOOTSTRAP_BUSINESS_NAME
+        value: WholesaleMart Platform
+      - key: APP_BOOTSTRAP_BUSINESS_SLUG
+        value: platform
+      - key: APP_BOOTSTRAP_PAYMENT_INSTRUCTIONS
+        value: Manual payment. Upload transaction proof after approval.
+
+databases:
+  - name: wholesalemart-db
+    plan: free
+    region: singapore
+    databaseName: wholesalemart
+    user: wholesalemart
