@@ -46,13 +46,13 @@
             </tr>
             <tr th:each="order : ${orders}">
                 <td th:text="${order.id}"></td>
-                <td><span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></td>
+                <td><span class="badge status-badge" th:classappend="${'status-' + (order.status != null ? order.status.name() : 'UNKNOWN')}" th:text="${order.status ?: '-'}"></span></td>
                 <td th:text="${order.totalAmount}"></td>
                 <td th:text="${order.createdAt != null ? order.createdAt.toLocalDate().toString() : '-'}"></td>
                 <td>
                     <div class="actions" style="margin-top:0">
                         <a th:href="@{/b/{slug}/orders/{id}(slug=${business.slug},id=${order.id})}">Open</a>
-                        <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+                        <form class="inline-form" th:if="${order.status != null && order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                             <button class="danger">Cancel</button>
                         </form>
                     </div>

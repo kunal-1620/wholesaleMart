@@ -11,22 +11,22 @@
     <div class="brand"><img class="brand-logo" th:src="${business.logoPath ?: '/placeholder-logo.svg'}" alt=""><span th:text="${business.name}">Business</span></div>
     <nav class="nav"><a th:href="@{/b/{slug}/shop(slug=${business.slug})}">Catalog</a><a th:href="@{/b/{slug}/orders(slug=${business.slug})}">Orders</a><form class="inline-form" method="post" th:action="@{/b/{slug}/logout(slug=${business.slug})}"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="secondary">Logout</button></form></nav>
 </header>
-<main class="container">
+<main class="container" th:with="statusName=${order.status != null ? order.status.name() : 'UNKNOWN'}">
     <div class="notice" th:if="${message}" th:text="${message}"></div>
     <div class="notice error" th:if="${error}" th:text="${error}"></div>
     <section class="card">
         <h1 th:text="'Order #' + ${order.id}"></h1>
-        <p><strong>Status:</strong> <span class="badge status-badge" th:classappend="${'status-' + order.status.name()}" th:text="${order.status}"></span></p>
+        <p><strong>Status:</strong> <span class="badge status-badge" th:classappend="${'status-' + statusName}" th:text="${order.status ?: '-'}"></span></p>
         <p><strong>Total:</strong> <span th:text="${order.totalAmount}"></span></p>
         <div class="actions">
             <a class="button secondary" th:href="@{/b/{slug}/orders/{id}/invoice.pdf(slug=${business.slug},id=${order.id})}">Download invoice PDF</a>
-            <form class="inline-form" th:if="${order.status.name() == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <form class="inline-form" th:if="${statusName == 'PENDING_APPROVAL'}" method="post" th:action="@{/b/{slug}/orders/{id}/cancel(slug=${business.slug},id=${order.id})}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                 <button class="danger">Cancel order</button>
             </form>
         </div>
-        <p class="muted" th:if="${order.status.name() == 'PENDING_APPROVAL'}">You can cancel this order while it is waiting for owner approval.</p>
-        <p class="muted" th:if="${order.status.name() == 'CANCELLED_BY_CUSTOMER'}">You cancelled this order before owner approval.</p>
-        <div class="notice" th:if="${order.status.name() == 'APPROVED_AWAITING_PAYMENT'}">
+        <p class="muted" th:if="${statusName == 'PENDING_APPROVAL'}">You can cancel this order while it is waiting for owner approval.</p>
+        <p class="muted" th:if="${statusName == 'CANCELLED_BY_CUSTOMER'}">You cancelled this order before owner approval.</p>
+        <div class="notice" th:if="${statusName == 'APPROVED_AWAITING_PAYMENT'}">
             <h3>Payment Instructions</h3>
             <p th:text="${business.paymentInstructions}"></p>
             <form method="post" th:action="@{/b/{slug}/orders/{id}/payment(slug=${business.slug},id=${order.id})}" enctype="multipart/form-data"><input type="hidden" name="_csrf" th:value="${csrfToken}">
@@ -37,7 +37,7 @@
                 <div class="actions"><button>Submit payment proof</button></div>
             </form>
         </div>
-        <div class="notice error" th:if="${order.status.name() == 'OUT_OF_STOCK'}">
+        <div class="notice error" th:if="${statusName == 'OUT_OF_STOCK'}">
             <h3>Some items went out of stock</h3>
             <p>The owner can suggest alternatives. You can upload updated payment proof again after resolving the order.</p>
             <pre th:text="${order.outOfStockSummary}"></pre>
@@ -49,8 +49,8 @@
                 <div class="actions"><button>Resubmit payment proof</button></div>
             </form>
         </div>
-        <p th:if="${order.status.name() == 'PAYMENT_SUBMITTED'}">Payment proof is waiting for owner verification. Stock will be reduced only after verification.</p>
-        <p th:if="${order.status.name() == 'PAID_CONFIRMED'}">Payment confirmed and inventory reduced.</p>
+        <p th:if="${statusName == 'PAYMENT_SUBMITTED'}">Payment proof is waiting for owner verification. Stock will be reduced only after verification.</p>
+        <p th:if="${statusName == 'PAID_CONFIRMED'}">Payment confirmed and inventory reduced.</p>
     </section>
     <h2 style="margin-top:24px">Items</h2>
     <div class="table-wrap">

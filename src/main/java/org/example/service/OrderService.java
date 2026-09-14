@@ -20,6 +20,8 @@ import org.example.repo.ProductRepository;
 import org.example.repo.SizeSetRepository;
 import org.example.repo.UserAccountRepository;
 import org.example.session.CartLine;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -254,13 +256,22 @@ public class OrderService {
             LocalDate createdFrom,
             LocalDate createdTo
     ) {
-        return orders.findForBusiness(
-                business,
-                status,
-                customerId,
-                startOfDay(createdFrom),
-                startOfNextDay(createdTo)
-        );
+        Specification<CustomerOrder> spec = (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("business"), business);
+        if (status != null) {
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status));
+        }
+        if (customerId != null) {
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("customer").get("id"), customerId));
+        }
+        if (createdFrom != null) {
+            LocalDateTime from = startOfDay(createdFrom);
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), from));
+        }
+        if (createdTo != null) {
+            LocalDateTime to = startOfNextDay(createdTo);
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.lessThan(root.get("createdAt"), to));
+        }
+        return orders.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     public List<CustomerOrder> ordersForCustomer(
@@ -269,12 +280,19 @@ public class OrderService {
             LocalDate createdFrom,
             LocalDate createdTo
     ) {
-        return orders.findForCustomer(
-                customer,
-                status,
-                startOfDay(createdFrom),
-                startOfNextDay(createdTo)
-        );
+        Specification<CustomerOrder> spec = (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("customer"), customer);
+        if (status != null) {
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status));
+        }
+        if (createdFrom != null) {
+            LocalDateTime from = startOfDay(createdFrom);
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), from));
+        }
+        if (createdTo != null) {
+            LocalDateTime to = startOfNextDay(createdTo);
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.lessThan(root.get("createdAt"), to));
+        }
+        return orders.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     public List<OrderItem> items(CustomerOrder order) {
